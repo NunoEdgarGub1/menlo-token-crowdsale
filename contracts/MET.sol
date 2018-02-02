@@ -3,8 +3,8 @@ pragma solidity ^0.4.18;
 import 'zeppelin-solidity/contracts/token/PausableToken.sol';
 import 'zeppelin-solidity/contracts/token/BurnableToken.sol';
 import 'zeppelin-solidity/contracts/token/ERC20Basic.sol';
-import './MenloTokenSale.sol';
 import './MenloPresale.sol';
+import './MenloTokenSale.sol';
 
 contract MET is PausableToken, BurnableToken {
 
@@ -22,11 +22,10 @@ contract MET is PausableToken, BurnableToken {
   uint256 public constant PUBLICSALE_SUPPLY = 270000000 * token_factor;
   uint256 public constant GROWTH_SUPPLY = 300000000 * token_factor;
   uint256 public constant TEAM_SUPPLY = 200000000 * token_factor;
-  uint256 public constant PARTNER_SUPPLY = 100000000 * token_factor;
   uint256 public constant ADVISOR_SUPPLY = 100000000 * token_factor;
+  uint256 public constant PARTNER_SUPPLY = 100000000 * token_factor;
 
   address private crowdsale;
-  address private presale;
 
   function isCrowdsaleAddressSet() public constant returns (bool) {
     return (address(crowdsale) != address(0));
@@ -37,24 +36,12 @@ contract MET is PausableToken, BurnableToken {
     _;
   }
 
-  function isPresaleAddressSet() public constant returns (bool) {
-    return (address(presale) != address(0));
-  }
-
-  modifier presaleNotInitialized() {
-    require(!isPresaleAddressSet());
-    _;
-  }
-
-  function MET(address _presale_wallet) public {
-    require(_presale_wallet != 0x0);
+  function MET() public {
     require(INITIAL_SUPPLY > 0);
-    require((PRESALE_SUPPLY + PUBLICSALE_SUPPLY + GROWTH_SUPPLY + TEAM_SUPPLY + PARTNER_SUPPLY + ADVISOR_SUPPLY) == INITIAL_SUPPLY);
+    require((PRESALE_SUPPLY + PUBLICSALE_SUPPLY + GROWTH_SUPPLY + TEAM_SUPPLY + ADVISOR_SUPPLY + PARTNER_SUPPLY) == INITIAL_SUPPLY);
     totalSupply = INITIAL_SUPPLY;
-    balances[msg.sender] = totalSupply - PRESALE_SUPPLY;
-    Transfer(0x0, msg.sender, totalSupply - PRESALE_SUPPLY);
-    balances[_presale_wallet] = PRESALE_SUPPLY;
-    Transfer(0x0, _presale_wallet, PRESALE_SUPPLY);
+    balances[msg.sender] = totalSupply;
+    Transfer(0x0, msg.sender, totalSupply);
   }
 
   function initializeCrowdsale(address _crowdsale) public onlyOwner crowdsaleNotInitialized {
@@ -64,30 +51,15 @@ contract MET is PausableToken, BurnableToken {
     transferOwnership(_crowdsale);
   }
 
-  function initializePresale(address _presale) public onlyOwner presaleNotInitialized {
-    transfer(_presale, PRESALE_SUPPLY);
-    presale = _presale;
+  function initializePresale(address _crowdsale) public onlyOwner crowdsaleNotInitialized {
+    transfer(_crowdsale, PRESALE_SUPPLY);
+    crowdsale = _crowdsale;
     pause();
-    transferOwnership(_presale);
+    transferOwnership(_crowdsale);
   }
 
   function getBlockTimestamp() internal constant returns (uint256) {
     return block.timestamp;
-  }
-
-  // Override - lifecycle/Pausable.sol
-  function unpause() onlyOwner whenPaused public {
-    if (MenloTokenSale(crowdsale).hasEnded()) {
-      // Tokens should be locked until 7 days after the crowdsale
-      require(getBlockTimestamp() >= (MenloTokenSale(crowdsale).endTime() + 7 days));
-    }
-
-    if (MenloPresale(presale).hasEnded()) {
-      // Tokens should be locked until 7 days after the presale
-      require(getBlockTimestamp() >= (MenloPresale(presale).endTime() + 7 days));
-    }
-
-    super.unpause();
   }
 
   // Don't accept calls to the contract address; must call a method.
