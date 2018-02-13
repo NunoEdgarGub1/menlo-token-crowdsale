@@ -3,7 +3,7 @@ pragma solidity ^0.4.18;
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 import 'zeppelin-solidity/contracts/token/ERC20Basic.sol';
-import './MET.sol';
+import './MenloToken.sol';
 
 /**
  * @title MenloTokenSale
@@ -29,7 +29,7 @@ contract MenloTokenSale is Ownable {
   uint256 public cap;
 
   // The token being sold
-  MET public token;
+  MenloToken public token;
 
   // start and end timestamps where contributions are allowed (both inclusive)
   uint256 public startTime;
@@ -41,12 +41,13 @@ contract MenloTokenSale is Ownable {
   // amount of raised money in wei
   uint256 public weiRaised;
 
-  // Timestamps for the bonus days, set in the constructor
+  // Timestamps for the bonus periods, set in the constructor
   uint256 private HOUR1;
   uint256 private WEEK1;
   uint256 private WEEK2;
   uint256 private WEEK3;
   uint256 private WEEK4;
+  uint256 private WEEK5;
 
   /**
    * event for token purchase logging
@@ -83,11 +84,11 @@ contract MenloTokenSale is Ownable {
     require(_startTime >= getBlockTimestamp());
     require(_endTime >= _startTime);
     require(_cap > 0);
-    require(_cap <= MET(_token).PUBLICSALE_SUPPLY());
+    require(_cap <= MenloToken(_token).PUBLICSALE_SUPPLY());
     require(_wallet != 0x0);
     require(_token != 0x0);
 
-    token = MET(_token);
+    token = MenloToken(_token);
     startTime = _startTime;
     endTime = _endTime;
     cap = _cap;
@@ -97,6 +98,7 @@ contract MenloTokenSale is Ownable {
     WEEK2 = WEEK1 + 1 weeks;
     WEEK3 = WEEK2 + 1 weeks;
     WEEK4 = WEEK3 + 1 weeks;
+    WEEK5 = WEEK4 + 1 years;
   }
 
   // fallback function can be used to buy tokens
@@ -114,15 +116,17 @@ contract MenloTokenSale is Ownable {
 
     uint256 currentTime = getBlockTimestamp();
     if (currentTime > startTime && currentTime <= HOUR1) {
-      bonusRate =  6500;
+      bonusRate =  6500; 
     } else if (currentTime <= WEEK1) {
-      bonusRate =  6000;
+      bonusRate =  6000; // after 1 hour
     } else if (currentTime <= WEEK2) {
-      bonusRate =  5750;
+      bonusRate =  5750; // after 1 week
     } else if (currentTime <= WEEK3) {
-      bonusRate =  5500;
+      bonusRate =  5500; // after 2 weeks
     } else if (currentTime <= WEEK4) {
-      bonusRate =  5250;
+      bonusRate =  5250; // after 3 weeks
+    } else if (currentTime <= WEEK5) {
+      bonusRate = 5000; // after 4 weeks
     }
     return bonusRate;
   }

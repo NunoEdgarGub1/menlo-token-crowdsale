@@ -3,10 +3,10 @@ pragma solidity ^0.4.18;
 import 'zeppelin-solidity/contracts/token/PausableToken.sol';
 import 'zeppelin-solidity/contracts/token/BurnableToken.sol';
 import 'zeppelin-solidity/contracts/token/ERC20Basic.sol';
-import './MenloPresale.sol';
 import './MenloTokenSale.sol';
+import './MenloTokenPresale.sol';
 
-contract MET is PausableToken, BurnableToken {
+contract MenloToken is PausableToken, BurnableToken {
 
   // Token properties.
   string public constant name = 'MenloToken';
@@ -25,6 +25,13 @@ contract MET is PausableToken, BurnableToken {
   uint256 public constant ADVISOR_SUPPLY = 100000000 * token_factor;
   uint256 public constant PARTNER_SUPPLY = 100000000 * token_factor;
 
+  function MenloToken() public {
+    require(INITIAL_SUPPLY > 0);
+    require((PRESALE_SUPPLY + PUBLICSALE_SUPPLY + GROWTH_SUPPLY + TEAM_SUPPLY + ADVISOR_SUPPLY + PARTNER_SUPPLY) == INITIAL_SUPPLY);
+    balances[msg.sender] = INITIAL_SUPPLY;
+    Transfer(0x0, msg.sender, INITIAL_SUPPLY);
+  }
+
   address private crowdsale;
 
   function isCrowdsaleAddressSet() public constant returns (bool) {
@@ -36,14 +43,6 @@ contract MET is PausableToken, BurnableToken {
     _;
   }
 
-  function MET() public {
-    require(INITIAL_SUPPLY > 0);
-    require((PRESALE_SUPPLY + PUBLICSALE_SUPPLY + GROWTH_SUPPLY + TEAM_SUPPLY + ADVISOR_SUPPLY + PARTNER_SUPPLY) == INITIAL_SUPPLY);
-    totalSupply = INITIAL_SUPPLY;
-    balances[msg.sender] = totalSupply;
-    Transfer(0x0, msg.sender, totalSupply);
-  }
-
   function initializeCrowdsale(address _crowdsale) public onlyOwner crowdsaleNotInitialized {
     transfer(_crowdsale, PUBLICSALE_SUPPLY);
     crowdsale = _crowdsale;
@@ -51,11 +50,22 @@ contract MET is PausableToken, BurnableToken {
     transferOwnership(_crowdsale);
   }
 
-  function initializePresale(address _crowdsale) public onlyOwner crowdsaleNotInitialized {
-    transfer(_crowdsale, PRESALE_SUPPLY);
-    crowdsale = _crowdsale;
+  address private presale;
+
+  function isPresaleAddressSet() public constant returns (bool) {
+    return (address(presale) != address(0));
+  }
+
+  modifier presaleNotInitialized() {
+    require(!isPresaleAddressSet());
+    _;
+  }
+
+  function initializePresale(address _presale) public onlyOwner presaleNotInitialized {
+    transfer(_presale, PRESALE_SUPPLY);
+    presale = _presale;
     pause();
-    transferOwnership(_crowdsale);
+    transferOwnership(_presale);
   }
 
   function getBlockTimestamp() internal constant returns (uint256) {

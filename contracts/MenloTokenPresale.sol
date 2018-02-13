@@ -3,17 +3,18 @@ pragma solidity ^0.4.18;
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 import 'zeppelin-solidity/contracts/token/ERC20Basic.sol';
-import './MET.sol';
+import './MenloTokenTimelock.sol';
+import './MenloToken.sol';
 
 /**
- * @title MenloPresale
+ * @title MenloTokenPresale
  * @dev Modified from OpenZeppelin's Crowdsale.sol
  * CappedCrowdsale.sol, and FinalizableCrowdsale.sol
  * Uses PausableToken rather than MintableToken.
  *
  * Requires that tokens for sale (entire supply minus team's portion) be deposited.
  */
-contract MenloPresale is Ownable {
+contract MenloTokenPresale is Ownable {
   using SafeMath for uint256;
 
   // Token allocations
@@ -29,7 +30,7 @@ contract MenloPresale is Ownable {
   uint256 public cap;
 
   // The token being sold
-  MET public token;
+  MenloToken public token;
 
   // start and end timestamps where contributions are allowed (both inclusive)
   uint256 public startTime;
@@ -66,7 +67,7 @@ contract MenloPresale is Ownable {
    */
   event Refund(address indexed purchaser, address indexed beneficiary, uint256 amount);
 
-  function MenloPresale(
+  function MenloTokenPresale(
       address _token,
       uint256 _startTime,
       uint256 _endTime,
@@ -76,11 +77,11 @@ contract MenloPresale is Ownable {
     require(_startTime >= getBlockTimestamp());
     require(_endTime >= _startTime);
     require(_cap > 0);
-    require(_cap <= MET(_token).PUBLICSALE_SUPPLY());
+    require(_cap <= MenloToken(_token).PRESALE_SUPPLY());
     require(_wallet != 0x0);
     require(_token != 0x0);
 
-    token = MET(_token);
+    token = MenloToken(_token);
     startTime = _startTime;
     endTime = _endTime;
     cap = _cap;
@@ -92,7 +93,7 @@ contract MenloPresale is Ownable {
     buyTokens(msg.sender);
   }
 
-  // Presale: 1 ETH = 6,750 MET (35% Bonus)
+  // 1 ETH = 6,750 MET
   function calculateBonusRate() public view returns (uint256) {
     uint256 bonusRate = 6750;
 
@@ -114,6 +115,12 @@ contract MenloPresale is Ownable {
 
    function ethToTokens(uint256 ethAmount) internal view returns (uint256) {
     return ethAmount.mul(calculateBonusRate());
+   }
+
+   address public tokenTimelock;
+
+   function setTokenTimeLock(address _tokenTimelock) public onlyOwner {
+     tokenTimelock = _tokenTimelock;
    }
 
   // low level token purchase function
@@ -140,11 +147,12 @@ contract MenloPresale is Ownable {
       msg.sender.transfer(weiToReturn);
       Refund(msg.sender, beneficiary, weiToReturn);
     }
-    // send tokens to purchaser
+    // send tokens to MenloTokenTimelock
     TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
-    token.transfer(beneficiary, tokens);
+    token.transfer(tokenTimelock, tokens);
+    MenloTokenTimelock(tokenTimelock).deposit(beneficiary, tokens);
     token.pause();
-    TokenRedeem(beneficiary, tokens);
+
     if (weiRaised == cap) {
       checkFinalize();
     }

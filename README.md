@@ -10,7 +10,7 @@ Please see the [contracts/](contracts) directory.
 
 ## Develop
 
-Contracts are written in [Solidity][solidity] and tested using [Truffle][truffle] and [testrpc][testrpc].
+Contracts are written in [Solidity][solidity] and tested using [Truffle][truffle] and [ganache][ganache].
 
 ### Dependencies
 
@@ -20,9 +20,8 @@ $ npm install
 ```
 
 ```bash
-# Run
-$ chmod +x make_flat.sh
-$ ./make_flat.sh
+# Test
+$ npm test
 ```
 
 [menlo]: https://menlo.one
@@ -30,4 +29,4 @@ $ ./make_flat.sh
 
 [solidity]: https://solidity.readthedocs.io/en/develop/
 [truffle]: http://truffleframework.com/
-[testrpc]: https://github.com/ethereumjs/testrpc
+[ganache]: https://github.com/trufflesuite/ganache-cli
