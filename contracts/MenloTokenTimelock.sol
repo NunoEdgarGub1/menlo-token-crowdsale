@@ -18,13 +18,21 @@ contract MenloTokenTimelock {
   // timestamp when token release is enabled
   uint256 public releaseTime;
 
-  function MenloTokenTimelock(ERC20Basic _token, uint256 _releaseTime) public {
+  address public presale;
+
+  modifier onlyPresale() {
+    require(msg.sender == presale);
+    _;
+  }
+
+  function MenloTokenTimelock(ERC20Basic _token, address _presale, uint256 _releaseTime) public {
     require(_releaseTime > now);
     token = _token;
+    presale = _presale;
     releaseTime = _releaseTime;
   }
-  // TODO: callable only by contract
-  function deposit(address _beneficiary, uint256 _amount) public {
+
+  function deposit(address _beneficiary, uint256 _amount) public onlyPresale {
     balance[_beneficiary] += _amount;
   }
 
@@ -38,7 +46,6 @@ contract MenloTokenTimelock {
     require(amount > 0);
     require(balance[msg.sender] > 0);
     require(amount >= balance[msg.sender]);
-    // release each presale participants tokens 
     token.transfer(msg.sender, balance[msg.sender]);
   }
 }
