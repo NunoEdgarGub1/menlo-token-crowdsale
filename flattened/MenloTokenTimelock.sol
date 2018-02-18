@@ -1,5 +1,19 @@
 pragma solidity ^0.4.18;
 
+library SafeERC20 {
+  function safeTransfer(ERC20Basic token, address to, uint256 value) internal {
+    assert(token.transfer(to, value));
+  }
+
+  function safeTransferFrom(ERC20 token, address from, address to, uint256 value) internal {
+    assert(token.transferFrom(from, to, value));
+  }
+
+  function safeApprove(ERC20 token, address spender, uint256 value) internal {
+    assert(token.approve(spender, value));
+  }
+}
+
 contract MenloTokenTimelock {
   using SafeERC20 for ERC20Basic;
 
@@ -11,13 +25,21 @@ contract MenloTokenTimelock {
   // timestamp when token release is enabled
   uint256 public releaseTime;
 
-  function MenloTokenTimelock(ERC20Basic _token, uint256 _releaseTime) public {
+  address public presale;
+
+  modifier onlyPresale() {
+    require(msg.sender == presale);
+    _;
+  }
+
+  function MenloTokenTimelock(ERC20Basic _token, address _presale, uint256 _releaseTime) public {
     require(_releaseTime > now);
     token = _token;
+    presale = _presale;
     releaseTime = _releaseTime;
   }
-  // TODO: callable only by contract
-  function deposit(address _beneficiary, uint256 _amount) public {
+
+  function deposit(address _beneficiary, uint256 _amount) public onlyPresale {
     balance[_beneficiary] += _amount;
   }
 
@@ -31,22 +53,7 @@ contract MenloTokenTimelock {
     require(amount > 0);
     require(balance[msg.sender] > 0);
     require(amount >= balance[msg.sender]);
-    // release each presale participants tokens
     token.transfer(msg.sender, balance[msg.sender]);
-  }
-}
-
-library SafeERC20 {
-  function safeTransfer(ERC20Basic token, address to, uint256 value) internal {
-    assert(token.transfer(to, value));
-  }
-
-  function safeTransferFrom(ERC20 token, address from, address to, uint256 value) internal {
-    assert(token.transferFrom(from, to, value));
-  }
-
-  function safeApprove(ERC20 token, address spender, uint256 value) internal {
-    assert(token.approve(spender, value));
   }
 }
 
