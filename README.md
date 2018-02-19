@@ -92,7 +92,7 @@ The token contract has the role of:
 Distributing preminted tokens. Implemented in `MenloToken.sol` and `MenloTokenVesting.sol`
 
 #### Token sale
-The token sale contract has the roles of:
+The token sale contracts have the roles of:
 
 Verifying that contributors are whitelisted. Implemented in `MenloTokenPresale.sol` and `MenloTokenSale.sol`.
 
