@@ -54,7 +54,7 @@ Preminted tokens are allocated to the company growth fund and team by the `Menlo
 
 ### Overview of flow
 
-1. Firstly `MenloToken.sol` is deployed and 1 billion MET tokens are minted to the owner address. This is a fixed supply and there can never be more MET created.
+1. Firstly `MenloToken.sol` is deployed and 1 billion MET tokens are minted to the owner address. This is a fixed supply and no more MET can ever be created.
 
 2. We deploy `MenloTokenPresale.sol` and list contributors who have been whitelist approved upon passing KYC procedures.
 The listing is done by us with a standard private key and whitelisting script.
