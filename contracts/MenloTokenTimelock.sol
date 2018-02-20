@@ -13,11 +13,13 @@ contract MenloTokenTimelock {
   // ERC20 basic token contract being held
   ERC20Basic public token;
 
+  // MENLO-NOTE!
   mapping (address => uint) public balance;
 
   // timestamp when token release is enabled
   uint256 public releaseTime;
 
+  // MENLO-NOTE!
   address public presale;
 
   modifier onlyPresale() {
@@ -32,6 +34,7 @@ contract MenloTokenTimelock {
     releaseTime = _releaseTime;
   }
 
+  // MENLO-NOTE!
   function deposit(address _beneficiary, uint256 _amount) public onlyPresale {
     balance[_beneficiary] += _amount;
   }
@@ -44,6 +47,7 @@ contract MenloTokenTimelock {
 
     uint256 amount = token.balanceOf(this);
     require(amount > 0);
+    // MENLO-NOTE!
     require(balance[msg.sender] > 0);
     require(amount >= balance[msg.sender]);
     token.transfer(msg.sender, balance[msg.sender]);
