@@ -28,6 +28,7 @@ contract MenloToken is PausableToken, BurnableToken {
   function MenloToken() public {
     require(INITIAL_SUPPLY > 0);
     require((PRESALE_SUPPLY + PUBLICSALE_SUPPLY + GROWTH_SUPPLY + TEAM_SUPPLY + ADVISOR_SUPPLY + PARTNER_SUPPLY) == INITIAL_SUPPLY);
+    totalSupply = INITIAL_SUPPLY;
     balances[msg.sender] = INITIAL_SUPPLY;
     Transfer(0x0, msg.sender, INITIAL_SUPPLY);
   }

@@ -26,13 +26,6 @@ library SafeMath {
   }
 }
 
-contract ERC20Basic {
-  uint256 public totalSupply;
-  function balanceOf(address who) public constant returns (uint256);
-  function transfer(address to, uint256 value) public returns (bool);
-  event Transfer(address indexed from, address indexed to, uint256 value);
-}
-
 contract Ownable {
   address public owner;
 
@@ -195,4 +188,11 @@ contract MenloTokenVesting is Ownable {
     refundToken.transfer(owner, balance);
     TokensClaimed(_token, balance);
   }
+}
+
+contract ERC20Basic {
+  uint256 public totalSupply;
+  function balanceOf(address who) public constant returns (uint256);
+  function transfer(address to, uint256 value) public returns (bool);
+  event Transfer(address indexed from, address indexed to, uint256 value);
 }

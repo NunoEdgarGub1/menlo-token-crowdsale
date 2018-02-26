@@ -1,30 +1,18 @@
 pragma solidity ^0.4.18;
 
-library SafeERC20 {
-  function safeTransfer(ERC20Basic token, address to, uint256 value) internal {
-    assert(token.transfer(to, value));
-  }
-
-  function safeTransferFrom(ERC20 token, address from, address to, uint256 value) internal {
-    assert(token.transferFrom(from, to, value));
-  }
-
-  function safeApprove(ERC20 token, address spender, uint256 value) internal {
-    assert(token.approve(spender, value));
-  }
-}
-
 contract MenloTokenTimelock {
   using SafeERC20 for ERC20Basic;
 
   // ERC20 basic token contract being held
   ERC20Basic public token;
 
+  // MENLO-NOTE!
   mapping (address => uint) public balance;
 
   // timestamp when token release is enabled
   uint256 public releaseTime;
 
+  // MENLO-NOTE!
   address public presale;
 
   modifier onlyPresale() {
@@ -39,6 +27,7 @@ contract MenloTokenTimelock {
     releaseTime = _releaseTime;
   }
 
+  // MENLO-NOTE!
   function deposit(address _beneficiary, uint256 _amount) public onlyPresale {
     balance[_beneficiary] += _amount;
   }
@@ -51,6 +40,7 @@ contract MenloTokenTimelock {
 
     uint256 amount = token.balanceOf(this);
     require(amount > 0);
+    // MENLO-NOTE!
     require(balance[msg.sender] > 0);
     require(amount >= balance[msg.sender]);
     token.transfer(msg.sender, balance[msg.sender]);
@@ -69,4 +59,18 @@ contract ERC20 is ERC20Basic {
   function transferFrom(address from, address to, uint256 value) public returns (bool);
   function approve(address spender, uint256 value) public returns (bool);
   event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+library SafeERC20 {
+  function safeTransfer(ERC20Basic token, address to, uint256 value) internal {
+    assert(token.transfer(to, value));
+  }
+
+  function safeTransferFrom(ERC20 token, address from, address to, uint256 value) internal {
+    assert(token.transferFrom(from, to, value));
+  }
+
+  function safeApprove(ERC20 token, address spender, uint256 value) internal {
+    assert(token.approve(spender, value));
+  }
 }
