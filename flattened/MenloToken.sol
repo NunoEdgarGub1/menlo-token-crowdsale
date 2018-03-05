@@ -1,17 +1,10 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.13;
 
-library SafeERC20 {
-  function safeTransfer(ERC20Basic token, address to, uint256 value) internal {
-    assert(token.transfer(to, value));
-  }
-
-  function safeTransferFrom(ERC20 token, address from, address to, uint256 value) internal {
-    assert(token.transferFrom(from, to, value));
-  }
-
-  function safeApprove(ERC20 token, address spender, uint256 value) internal {
-    assert(token.approve(spender, value));
-  }
+contract ERC20Basic {
+  uint256 public totalSupply;
+  function balanceOf(address who) public constant returns (uint256);
+  function transfer(address to, uint256 value) public returns (bool);
+  event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
 contract Ownable {
@@ -80,6 +73,14 @@ contract MenloTokenPresale is Ownable {
   uint256 public weiRaised;
 
   /**
+   * @dev Throws if called by any account other than the whitelister.
+   */
+  modifier onlyWhitelister() {
+    require(msg.sender == whitelister);
+    _;
+  }
+
+  /**
    * event for token purchase logging
    * @param purchaser who paid for the tokens
    * @param beneficiary who got the tokens
@@ -140,7 +141,7 @@ contract MenloTokenPresale is Ownable {
   /// @notice interface for founders to whitelist investors
   /// @param _addresses array of investors
   /// @param _status enable or disable
-  function whitelistAddresses(address[] _addresses, bool _status) public onlyOwner {
+  function whitelistAddresses(address[] _addresses, bool _status) public onlyWhitelister {
     for (uint256 i = 0; i < _addresses.length; i++) {
         address investorAddress = _addresses[i];
         if (whitelist[investorAddress] == _status) {
@@ -158,6 +159,12 @@ contract MenloTokenPresale is Ownable {
 
    function setTokenTimeLock(address _tokenTimelock) public onlyOwner {
      tokenTimelock = _tokenTimelock;
+   }
+
+  address public whitelister;
+
+   function setWhitelister(address _whitelister) public onlyOwner {
+      whitelister = _whitelister;
    }
 
   // low level token purchase function
@@ -315,65 +322,30 @@ contract Pausable is Ownable {
   }
 }
 
-contract ERC20Basic {
-  uint256 public totalSupply;
-  function balanceOf(address who) public constant returns (uint256);
-  function transfer(address to, uint256 value) public returns (bool);
-  event Transfer(address indexed from, address indexed to, uint256 value);
-}
-
-contract MenloTokenTimelock {
-  using SafeERC20 for ERC20Basic;
-
-  // ERC20 basic token contract being held
-  ERC20Basic public token;
-
-  // MENLO-NOTE!
-  mapping (address => uint) public balance;
-
-  // timestamp when token release is enabled
-  uint256 public releaseTime;
-
-  // MENLO-NOTE!
-  address public presale;
-
-  modifier onlyPresale() {
-    require(msg.sender == presale);
-    _;
+library SafeMath {
+  function mul(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
   }
 
-  function MenloTokenTimelock(ERC20Basic _token, address _presale, uint256 _releaseTime) public {
-    require(_releaseTime > now);
-    token = _token;
-    presale = _presale;
-    releaseTime = _releaseTime;
+  function div(uint256 a, uint256 b) internal constant returns (uint256) {
+    // assert(b > 0); // Solidity automatically throws when dividing by 0
+    uint256 c = a / b;
+    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+    return c;
   }
 
-  // MENLO-NOTE!
-  function deposit(address _beneficiary, uint256 _amount) public onlyPresale {
-    balance[_beneficiary] += _amount;
+  function sub(uint256 a, uint256 b) internal constant returns (uint256) {
+    assert(b <= a);
+    return a - b;
   }
 
-  /**
-   * @notice Transfers tokens held by timelock to beneficiary.
-   */
-  function release() public {
-    require(now >= releaseTime);
-
-    uint256 amount = token.balanceOf(this);
-    require(amount > 0);
-    // MENLO-NOTE!
-    require(balance[msg.sender] > 0);
-    require(amount >= balance[msg.sender]);
-    token.transfer(msg.sender, balance[msg.sender]);
+  function add(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
   }
-}
-
-contract ERC20 is ERC20Basic {
-  function allowance(address owner, address spender) public constant returns (uint256);
-  function transferFrom(address from, address to, uint256 value) public returns (bool);
-  function approve(address spender, uint256 value) public returns (bool);
-  event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
 contract MenloTokenSale is Ownable {
@@ -403,6 +375,14 @@ contract MenloTokenSale is Ownable {
 
   // amount of raised money in wei
   uint256 public weiRaised;
+
+  /**
+   * @dev Throws if called by any account other than the whitelister.
+   */
+  modifier onlyWhitelister() {
+    require(msg.sender == whitelister);
+    _;
+  }
 
   // Timestamps for the bonus periods, set in the constructor
   uint256 private HOUR1;
@@ -497,7 +477,7 @@ contract MenloTokenSale is Ownable {
   /// @notice interface for founders to whitelist investors
   /// @param _addresses array of investors
   /// @param _status enable or disable
-  function whitelistAddresses(address[] _addresses, bool _status) public onlyOwner {
+  function whitelistAddresses(address[] _addresses, bool _status) public onlyWhitelister {
     for (uint256 i = 0; i < _addresses.length; i++) {
         address investorAddress = _addresses[i];
         if (whitelist[investorAddress] == _status) {
@@ -510,6 +490,12 @@ contract MenloTokenSale is Ownable {
    function ethToTokens(uint256 ethAmount) internal view returns (uint256) {
     return ethAmount.mul(calculateBonusRate());
    }
+
+   address public whitelister;
+
+    function setWhitelister(address _whitelister) public onlyOwner {
+       whitelister = _whitelister;
+    }
 
   // low level token purchase function
   // caution: tokens must be redeemed by beneficiary address
@@ -625,29 +611,50 @@ contract MenloTokenSale is Ownable {
   }
 }
 
-library SafeMath {
-  function mul(uint256 a, uint256 b) internal constant returns (uint256) {
-    uint256 c = a * b;
-    assert(a == 0 || c / a == b);
-    return c;
+contract MenloTokenTimelock {
+  using SafeERC20 for ERC20Basic;
+
+  // ERC20 basic token contract being held
+  ERC20Basic public token;
+
+  // MENLO-NOTE!
+  mapping (address => uint) public balance;
+
+  // timestamp when token release is enabled
+  uint256 public releaseTime;
+
+  // MENLO-NOTE!
+  address public presale;
+
+  modifier onlyPresale() {
+    require(msg.sender == presale);
+    _;
   }
 
-  function div(uint256 a, uint256 b) internal constant returns (uint256) {
-    // assert(b > 0); // Solidity automatically throws when dividing by 0
-    uint256 c = a / b;
-    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-    return c;
+  function MenloTokenTimelock(ERC20Basic _token, address _presale, uint256 _releaseTime) public {
+    require(_releaseTime > now);
+    token = _token;
+    presale = _presale;
+    releaseTime = _releaseTime;
   }
 
-  function sub(uint256 a, uint256 b) internal constant returns (uint256) {
-    assert(b <= a);
-    return a - b;
+  // MENLO-NOTE!
+  function deposit(address _beneficiary, uint256 _amount) public onlyPresale {
+    balance[_beneficiary] += _amount;
   }
 
-  function add(uint256 a, uint256 b) internal constant returns (uint256) {
-    uint256 c = a + b;
-    assert(c >= a);
-    return c;
+  /**
+   * @notice Transfers tokens held by timelock to beneficiary.
+   */
+  function release() public {
+    require(now >= releaseTime);
+
+    uint256 amount = token.balanceOf(this);
+    require(amount > 0);
+    // MENLO-NOTE!
+    require(balance[msg.sender] > 0);
+    require(amount >= balance[msg.sender]);
+    token.transfer(msg.sender, balance[msg.sender]);
   }
 }
 
@@ -680,6 +687,27 @@ contract BasicToken is ERC20Basic {
     return balances[_owner];
   }
 
+}
+
+library SafeERC20 {
+  function safeTransfer(ERC20Basic token, address to, uint256 value) internal {
+    assert(token.transfer(to, value));
+  }
+
+  function safeTransferFrom(ERC20 token, address from, address to, uint256 value) internal {
+    assert(token.transferFrom(from, to, value));
+  }
+
+  function safeApprove(ERC20 token, address spender, uint256 value) internal {
+    assert(token.approve(spender, value));
+  }
+}
+
+contract ERC20 is ERC20Basic {
+  function allowance(address owner, address spender) public constant returns (uint256);
+  function transferFrom(address from, address to, uint256 value) public returns (bool);
+  function approve(address spender, uint256 value) public returns (bool);
+  event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
 contract StandardToken is ERC20, BasicToken {
@@ -761,24 +789,6 @@ contract StandardToken is ERC20, BasicToken {
 
 }
 
-contract BurnableToken is StandardToken {
-
-    event Burn(address indexed burner, uint256 value);
-
-    /**
-     * @dev Burns a specific amount of tokens.
-     * @param _value The amount of token to be burned.
-     */
-    function burn(uint256 _value) public {
-        require(_value > 0);
-
-        address burner = msg.sender;
-        balances[burner] = balances[burner].sub(_value);
-        totalSupply = totalSupply.sub(_value);
-        Burn(burner, _value);
-    }
-}
-
 contract PausableToken is StandardToken, Pausable {
 
   function transfer(address _to, uint256 _value) public whenNotPaused returns (bool) {
@@ -800,6 +810,24 @@ contract PausableToken is StandardToken, Pausable {
   function decreaseApproval(address _spender, uint _subtractedValue) public whenNotPaused returns (bool success) {
     return super.decreaseApproval(_spender, _subtractedValue);
   }
+}
+
+contract BurnableToken is StandardToken {
+
+    event Burn(address indexed burner, uint256 value);
+
+    /**
+     * @dev Burns a specific amount of tokens.
+     * @param _value The amount of token to be burned.
+     */
+    function burn(uint256 _value) public {
+        require(_value > 0);
+
+        address burner = msg.sender;
+        balances[burner] = balances[burner].sub(_value);
+        totalSupply = totalSupply.sub(_value);
+        Burn(burner, _value);
+    }
 }
 
 contract MenloToken is PausableToken, BurnableToken {
@@ -886,3 +914,4 @@ contract MenloToken is PausableToken, BurnableToken {
     }
 
 }
+

@@ -1,11 +1,4 @@
-pragma solidity ^0.4.18;
-
-contract ERC20Basic {
-  uint256 public totalSupply;
-  function balanceOf(address who) public constant returns (uint256);
-  function transfer(address to, uint256 value) public returns (bool);
-  event Transfer(address indexed from, address indexed to, uint256 value);
-}
+pragma solidity ^0.4.13;
 
 contract Ownable {
   address public owner;
@@ -44,349 +37,6 @@ contract Ownable {
 
 }
 
-contract MenloTokenTimelock {
-  using SafeERC20 for ERC20Basic;
-
-  // ERC20 basic token contract being held
-  ERC20Basic public token;
-
-  // MENLO-NOTE!
-  mapping (address => uint) public balance;
-
-  // timestamp when token release is enabled
-  uint256 public releaseTime;
-
-  // MENLO-NOTE!
-  address public presale;
-
-  modifier onlyPresale() {
-    require(msg.sender == presale);
-    _;
-  }
-
-  function MenloTokenTimelock(ERC20Basic _token, address _presale, uint256 _releaseTime) public {
-    require(_releaseTime > now);
-    token = _token;
-    presale = _presale;
-    releaseTime = _releaseTime;
-  }
-
-  // MENLO-NOTE!
-  function deposit(address _beneficiary, uint256 _amount) public onlyPresale {
-    balance[_beneficiary] += _amount;
-  }
-
-  /**
-   * @notice Transfers tokens held by timelock to beneficiary.
-   */
-  function release() public {
-    require(now >= releaseTime);
-
-    uint256 amount = token.balanceOf(this);
-    require(amount > 0);
-    // MENLO-NOTE!
-    require(balance[msg.sender] > 0);
-    require(amount >= balance[msg.sender]);
-    token.transfer(msg.sender, balance[msg.sender]);
-  }
-}
-
-contract Pausable is Ownable {
-  event Pause();
-  event Unpause();
-
-  bool public paused = false;
-
-
-  /**
-   * @dev Modifier to make a function callable only when the contract is not paused.
-   */
-  modifier whenNotPaused() {
-    require(!paused);
-    _;
-  }
-
-  /**
-   * @dev Modifier to make a function callable only when the contract is paused.
-   */
-  modifier whenPaused() {
-    require(paused);
-    _;
-  }
-
-  /**
-   * @dev called by the owner to pause, triggers stopped state
-   */
-  function pause() onlyOwner whenNotPaused public {
-    paused = true;
-    Pause();
-  }
-
-  /**
-   * @dev called by the owner to unpause, returns to normal state
-   */
-  function unpause() onlyOwner whenPaused public {
-    paused = false;
-    Unpause();
-  }
-}
-
-contract ERC20 is ERC20Basic {
-  function allowance(address owner, address spender) public constant returns (uint256);
-  function transferFrom(address from, address to, uint256 value) public returns (bool);
-  function approve(address spender, uint256 value) public returns (bool);
-  event Approval(address indexed owner, address indexed spender, uint256 value);
-}
-
-contract MenloTokenSale is Ownable {
-  using SafeMath for uint256;
-
-  // Token allocations
-  mapping (address => uint256) public allocations;
-
-  // Whitelisted investors
-  mapping (address => bool) public whitelist;
-
-  // manual early close flag
-  bool public isFinalized = false;
-
-  // cap for crowdsale in wei
-  uint256 public cap;
-
-  // The token being sold
-  MenloToken public token;
-
-  // start and end timestamps where contributions are allowed (both inclusive)
-  uint256 public startTime;
-  uint256 public endTime;
-
-  // address where funds are collected
-  address public wallet;
-
-  // amount of raised money in wei
-  uint256 public weiRaised;
-
-  // Timestamps for the bonus periods, set in the constructor
-  uint256 private HOUR1;
-  uint256 private WEEK1;
-  uint256 private WEEK2;
-  uint256 private WEEK3;
-  uint256 private WEEK4;
-  uint256 private WEEK5;
-
-  /**
-   * event for token purchase logging
-   * @param purchaser who paid for the tokens
-   * @param beneficiary who got the tokens
-   * @param value weis paid for purchase
-   * @param amount amount of tokens purchased
-   */
-  event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
-
-  /**
-   * event for token redemption logging
-   * @param beneficiary who got the tokens
-   * @param amount amount of tokens redeemed
-   */
-  event TokenRedeem(address indexed beneficiary, uint256 amount);
-
-  // termination early or otherwise
-  event Finalized();
-
-  /**
-   * event refund of excess ETH if purchase is above the cap
-   * @param amount amount of ETH (in wei) refunded
-   */
-  event Refund(address indexed purchaser, address indexed beneficiary, uint256 amount);
-
-  function MenloTokenSale(
-      address _token,
-      uint256 _startTime,
-      uint256 _endTime,
-      uint256 _cap,
-      address _wallet
-  ) public {
-    require(_startTime >= getBlockTimestamp());
-    require(_endTime >= _startTime);
-    require(_cap > 0);
-    require(_cap <= MenloToken(_token).PUBLICSALE_SUPPLY());
-    require(_wallet != 0x0);
-    require(_token != 0x0);
-
-    token = MenloToken(_token);
-    startTime = _startTime;
-    endTime = _endTime;
-    cap = _cap;
-    wallet = _wallet;
-    HOUR1 = startTime + 1 hours;
-    WEEK1 = HOUR1 + 1 weeks;
-    WEEK2 = WEEK1 + 1 weeks;
-    WEEK3 = WEEK2 + 1 weeks;
-    WEEK4 = WEEK3 + 1 weeks;
-    WEEK5 = WEEK4 + 1 years;
-  }
-
-  // fallback function can be used to buy tokens
-  function () public payable {
-    buyTokens(msg.sender);
-  }
-
-  // Hour 1: 1 ETH = 6,500 MET (30% Bonus)
-  // Week 1: 1 ETH = 6,000 MET (20% Bonus)
-  // Week 2: 1 ETH = 5,750 MET (15% Bonus)
-  // Week 3: 1 ETH = 5,500 MET (10% Bonus)
-  // Week 4: 1 ETH = 5,250 MET (5% Bonus)
-  function calculateBonusRate() public view returns (uint256) {
-    uint256 bonusRate = 5000;
-
-    uint256 currentTime = getBlockTimestamp();
-    if (currentTime > startTime && currentTime <= HOUR1) {
-      bonusRate =  6500;
-    } else if (currentTime <= WEEK1) {
-      bonusRate =  6000; // after 1 hour
-    } else if (currentTime <= WEEK2) {
-      bonusRate =  5750; // after 1 week
-    } else if (currentTime <= WEEK3) {
-      bonusRate =  5500; // after 2 weeks
-    } else if (currentTime <= WEEK4) {
-      bonusRate =  5250; // after 3 weeks
-    } else if (currentTime <= WEEK5) {
-      bonusRate = 5000; // after 4 weeks
-    }
-    return bonusRate;
-  }
-
-  /// @notice interface for founders to whitelist investors
-  /// @param _addresses array of investors
-  /// @param _status enable or disable
-  function whitelistAddresses(address[] _addresses, bool _status) public onlyOwner {
-    for (uint256 i = 0; i < _addresses.length; i++) {
-        address investorAddress = _addresses[i];
-        if (whitelist[investorAddress] == _status) {
-          continue;
-        }
-        whitelist[investorAddress] = _status;
-    }
-   }
-
-   function ethToTokens(uint256 ethAmount) internal view returns (uint256) {
-    return ethAmount.mul(calculateBonusRate());
-   }
-
-  // low level token purchase function
-  // caution: tokens must be redeemed by beneficiary address
-  function buyTokens(address beneficiary) public payable {
-    require(whitelist[beneficiary]);
-    require(beneficiary != 0x0);
-    require(validPurchase());
-
-    uint256 weiAmount = msg.value;
-
-    uint256 remainingToFund = cap.sub(weiRaised);
-    if (weiAmount > remainingToFund) {
-      weiAmount = remainingToFund;
-    }
-    uint256 weiToReturn = msg.value.sub(weiAmount);
-    uint256 tokens = ethToTokens(weiAmount);
-
-    token.unpause();
-    weiRaised = weiRaised.add(weiAmount);
-
-    forwardFunds(weiAmount);
-    if (weiToReturn > 0) {
-      msg.sender.transfer(weiToReturn);
-      Refund(msg.sender, beneficiary, weiToReturn);
-    }
-    // send tokens to purchaser
-    TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
-    token.transfer(beneficiary, tokens);
-    token.pause();
-    TokenRedeem(beneficiary, tokens);
-    if (weiRaised == cap) {
-      checkFinalize();
-    }
-  }
-
-  // send ether to the fund collection wallet
-  // override to create custom fund forwarding mechanisms
-  function forwardFunds(uint256 amount) internal {
-    wallet.transfer(amount);
-  }
-
-  function checkFinalize() public {
-    if (hasEnded()) {
-      finalize();
-    }
-  }
-
-  // @return true if the transaction can buy tokens
-  function validPurchase() internal returns (bool) {
-    checkFinalize();
-    require(!isFinalized);
-    bool withinPeriod = getBlockTimestamp() >= startTime && getBlockTimestamp() <= endTime;
-    bool nonZeroPurchase = msg.value != 0;
-    bool contractHasTokens = token.balanceOf(this) > 0;
-    return withinPeriod && nonZeroPurchase && contractHasTokens;
-  }
-
-  // @return true if crowdsale event has ended or cap reached
-  function hasEnded() public constant returns (bool) {
-    if (isFinalized) {
-      return true;
-    }
-    bool capReached = weiRaised >= cap;
-    bool passedEndTime = getBlockTimestamp() > endTime;
-    return passedEndTime || capReached;
-  }
-
-  function getBlockTimestamp() internal view returns (uint256) {
-    return block.timestamp;
-  }
-
-  function emergencyFinalize() public onlyOwner {
-    finalize();
-  }
-  // @dev does not require that crowdsale `hasEnded()` to leave safegaurd
-  // in place if ETH rises in price too much during crowdsale.
-  // Allows team to close early if cap is exceeded in USD in this event.
-  function finalize() internal {
-    require(!isFinalized);
-    Finalized();
-    isFinalized = true;
-    token.transferOwnership(owner);
-  }
-
-  // Allows the owner to take back the tokens that are assigned to the sale contract.
-  event TokensRefund(uint256 _amount);
-  function refund() external onlyOwner returns (bool) {
-      require(hasEnded());
-      uint256 tokens = token.balanceOf(address(this));
-
-      if (tokens == 0) {
-         return false;
-      }
-
-      require(token.transfer(owner, tokens));
-
-      TokensRefund(tokens);
-
-      return true;
-   }
-
-  function claimTokens(address _token) public onlyOwner {
-    require(hasEnded());
-    if (_token == 0x0) {
-        owner.transfer(this.balance);
-        return;
-    }
-
-    ERC20Basic refundToken = ERC20Basic(_token);
-    uint256 balance = refundToken.balanceOf(this);
-    refundToken.transfer(owner, balance);
-    TokensRefund(balance);
-  }
-}
-
 contract MenloTokenPresale is Ownable {
   using SafeMath for uint256;
 
@@ -414,6 +64,14 @@ contract MenloTokenPresale is Ownable {
 
   // amount of raised money in wei
   uint256 public weiRaised;
+
+  /**
+   * @dev Throws if called by any account other than the whitelister.
+   */
+  modifier onlyWhitelister() {
+    require(msg.sender == whitelister);
+    _;
+  }
 
   /**
    * event for token purchase logging
@@ -476,7 +134,7 @@ contract MenloTokenPresale is Ownable {
   /// @notice interface for founders to whitelist investors
   /// @param _addresses array of investors
   /// @param _status enable or disable
-  function whitelistAddresses(address[] _addresses, bool _status) public onlyOwner {
+  function whitelistAddresses(address[] _addresses, bool _status) public onlyWhitelister {
     for (uint256 i = 0; i < _addresses.length; i++) {
         address investorAddress = _addresses[i];
         if (whitelist[investorAddress] == _status) {
@@ -494,6 +152,12 @@ contract MenloTokenPresale is Ownable {
 
    function setTokenTimeLock(address _tokenTimelock) public onlyOwner {
      tokenTimelock = _tokenTimelock;
+   }
+
+  address public whitelister;
+
+   function setWhitelister(address _whitelister) public onlyOwner {
+      whitelister = _whitelister;
    }
 
   // low level token purchase function
@@ -611,6 +275,337 @@ contract MenloTokenPresale is Ownable {
   }
 }
 
+contract MenloTokenSale is Ownable {
+  using SafeMath for uint256;
+
+  // Token allocations
+  mapping (address => uint256) public allocations;
+
+  // Whitelisted investors
+  mapping (address => bool) public whitelist;
+
+  // manual early close flag
+  bool public isFinalized = false;
+
+  // cap for crowdsale in wei
+  uint256 public cap;
+
+  // The token being sold
+  MenloToken public token;
+
+  // start and end timestamps where contributions are allowed (both inclusive)
+  uint256 public startTime;
+  uint256 public endTime;
+
+  // address where funds are collected
+  address public wallet;
+
+  // amount of raised money in wei
+  uint256 public weiRaised;
+
+  /**
+   * @dev Throws if called by any account other than the whitelister.
+   */
+  modifier onlyWhitelister() {
+    require(msg.sender == whitelister);
+    _;
+  }
+
+  // Timestamps for the bonus periods, set in the constructor
+  uint256 private HOUR1;
+  uint256 private WEEK1;
+  uint256 private WEEK2;
+  uint256 private WEEK3;
+  uint256 private WEEK4;
+  uint256 private WEEK5;
+
+  /**
+   * event for token purchase logging
+   * @param purchaser who paid for the tokens
+   * @param beneficiary who got the tokens
+   * @param value weis paid for purchase
+   * @param amount amount of tokens purchased
+   */
+  event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
+
+  /**
+   * event for token redemption logging
+   * @param beneficiary who got the tokens
+   * @param amount amount of tokens redeemed
+   */
+  event TokenRedeem(address indexed beneficiary, uint256 amount);
+
+  // termination early or otherwise
+  event Finalized();
+
+  /**
+   * event refund of excess ETH if purchase is above the cap
+   * @param amount amount of ETH (in wei) refunded
+   */
+  event Refund(address indexed purchaser, address indexed beneficiary, uint256 amount);
+
+  function MenloTokenSale(
+      address _token,
+      uint256 _startTime,
+      uint256 _endTime,
+      uint256 _cap,
+      address _wallet
+  ) public {
+    require(_startTime >= getBlockTimestamp());
+    require(_endTime >= _startTime);
+    require(_cap > 0);
+    require(_cap <= MenloToken(_token).PUBLICSALE_SUPPLY());
+    require(_wallet != 0x0);
+    require(_token != 0x0);
+
+    token = MenloToken(_token);
+    startTime = _startTime;
+    endTime = _endTime;
+    cap = _cap;
+    wallet = _wallet;
+    HOUR1 = startTime + 1 hours;
+    WEEK1 = HOUR1 + 1 weeks;
+    WEEK2 = WEEK1 + 1 weeks;
+    WEEK3 = WEEK2 + 1 weeks;
+    WEEK4 = WEEK3 + 1 weeks;
+    WEEK5 = WEEK4 + 1 years;
+  }
+
+  // fallback function can be used to buy tokens
+  function () public payable {
+    buyTokens(msg.sender);
+  }
+
+  // Hour 1: 1 ETH = 6,500 MET (30% Bonus)
+  // Week 1: 1 ETH = 6,000 MET (20% Bonus)
+  // Week 2: 1 ETH = 5,750 MET (15% Bonus)
+  // Week 3: 1 ETH = 5,500 MET (10% Bonus)
+  // Week 4: 1 ETH = 5,250 MET (5% Bonus)
+  function calculateBonusRate() public view returns (uint256) {
+    uint256 bonusRate = 5000;
+
+    uint256 currentTime = getBlockTimestamp();
+    if (currentTime > startTime && currentTime <= HOUR1) {
+      bonusRate =  6500;
+    } else if (currentTime <= WEEK1) {
+      bonusRate =  6000; // after 1 hour
+    } else if (currentTime <= WEEK2) {
+      bonusRate =  5750; // after 1 week
+    } else if (currentTime <= WEEK3) {
+      bonusRate =  5500; // after 2 weeks
+    } else if (currentTime <= WEEK4) {
+      bonusRate =  5250; // after 3 weeks
+    } else if (currentTime <= WEEK5) {
+      bonusRate = 5000; // after 4 weeks
+    }
+    return bonusRate;
+  }
+
+  /// @notice interface for founders to whitelist investors
+  /// @param _addresses array of investors
+  /// @param _status enable or disable
+  function whitelistAddresses(address[] _addresses, bool _status) public onlyWhitelister {
+    for (uint256 i = 0; i < _addresses.length; i++) {
+        address investorAddress = _addresses[i];
+        if (whitelist[investorAddress] == _status) {
+          continue;
+        }
+        whitelist[investorAddress] = _status;
+    }
+   }
+
+   function ethToTokens(uint256 ethAmount) internal view returns (uint256) {
+    return ethAmount.mul(calculateBonusRate());
+   }
+
+   address public whitelister;
+
+    function setWhitelister(address _whitelister) public onlyOwner {
+       whitelister = _whitelister;
+    }
+
+  // low level token purchase function
+  // caution: tokens must be redeemed by beneficiary address
+  function buyTokens(address beneficiary) public payable {
+    require(whitelist[beneficiary]);
+    require(beneficiary != 0x0);
+    require(validPurchase());
+
+    uint256 weiAmount = msg.value;
+
+    uint256 remainingToFund = cap.sub(weiRaised);
+    if (weiAmount > remainingToFund) {
+      weiAmount = remainingToFund;
+    }
+    uint256 weiToReturn = msg.value.sub(weiAmount);
+    uint256 tokens = ethToTokens(weiAmount);
+
+    token.unpause();
+    weiRaised = weiRaised.add(weiAmount);
+
+    forwardFunds(weiAmount);
+    if (weiToReturn > 0) {
+      msg.sender.transfer(weiToReturn);
+      Refund(msg.sender, beneficiary, weiToReturn);
+    }
+    // send tokens to purchaser
+    TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+    token.transfer(beneficiary, tokens);
+    token.pause();
+    TokenRedeem(beneficiary, tokens);
+    if (weiRaised == cap) {
+      checkFinalize();
+    }
+  }
+
+  // send ether to the fund collection wallet
+  // override to create custom fund forwarding mechanisms
+  function forwardFunds(uint256 amount) internal {
+    wallet.transfer(amount);
+  }
+
+  function checkFinalize() public {
+    if (hasEnded()) {
+      finalize();
+    }
+  }
+
+  // @return true if the transaction can buy tokens
+  function validPurchase() internal returns (bool) {
+    checkFinalize();
+    require(!isFinalized);
+    bool withinPeriod = getBlockTimestamp() >= startTime && getBlockTimestamp() <= endTime;
+    bool nonZeroPurchase = msg.value != 0;
+    bool contractHasTokens = token.balanceOf(this) > 0;
+    return withinPeriod && nonZeroPurchase && contractHasTokens;
+  }
+
+  // @return true if crowdsale event has ended or cap reached
+  function hasEnded() public constant returns (bool) {
+    if (isFinalized) {
+      return true;
+    }
+    bool capReached = weiRaised >= cap;
+    bool passedEndTime = getBlockTimestamp() > endTime;
+    return passedEndTime || capReached;
+  }
+
+  function getBlockTimestamp() internal view returns (uint256) {
+    return block.timestamp;
+  }
+
+  function emergencyFinalize() public onlyOwner {
+    finalize();
+  }
+  // @dev does not require that crowdsale `hasEnded()` to leave safegaurd
+  // in place if ETH rises in price too much during crowdsale.
+  // Allows team to close early if cap is exceeded in USD in this event.
+  function finalize() internal {
+    require(!isFinalized);
+    Finalized();
+    isFinalized = true;
+    token.transferOwnership(owner);
+  }
+
+  // Allows the owner to take back the tokens that are assigned to the sale contract.
+  event TokensRefund(uint256 _amount);
+  function refund() external onlyOwner returns (bool) {
+      require(hasEnded());
+      uint256 tokens = token.balanceOf(address(this));
+
+      if (tokens == 0) {
+         return false;
+      }
+
+      require(token.transfer(owner, tokens));
+
+      TokensRefund(tokens);
+
+      return true;
+   }
+
+  function claimTokens(address _token) public onlyOwner {
+    require(hasEnded());
+    if (_token == 0x0) {
+        owner.transfer(this.balance);
+        return;
+    }
+
+    ERC20Basic refundToken = ERC20Basic(_token);
+    uint256 balance = refundToken.balanceOf(this);
+    refundToken.transfer(owner, balance);
+    TokensRefund(balance);
+  }
+}
+
+contract Pausable is Ownable {
+  event Pause();
+  event Unpause();
+
+  bool public paused = false;
+
+
+  /**
+   * @dev Modifier to make a function callable only when the contract is not paused.
+   */
+  modifier whenNotPaused() {
+    require(!paused);
+    _;
+  }
+
+  /**
+   * @dev Modifier to make a function callable only when the contract is paused.
+   */
+  modifier whenPaused() {
+    require(paused);
+    _;
+  }
+
+  /**
+   * @dev called by the owner to pause, triggers stopped state
+   */
+  function pause() onlyOwner whenNotPaused public {
+    paused = true;
+    Pause();
+  }
+
+  /**
+   * @dev called by the owner to unpause, returns to normal state
+   */
+  function unpause() onlyOwner whenPaused public {
+    paused = false;
+    Unpause();
+  }
+}
+
+library SafeERC20 {
+  function safeTransfer(ERC20Basic token, address to, uint256 value) internal {
+    assert(token.transfer(to, value));
+  }
+
+  function safeTransferFrom(ERC20 token, address from, address to, uint256 value) internal {
+    assert(token.transferFrom(from, to, value));
+  }
+
+  function safeApprove(ERC20 token, address spender, uint256 value) internal {
+    assert(token.approve(spender, value));
+  }
+}
+
+contract ERC20Basic {
+  uint256 public totalSupply;
+  function balanceOf(address who) public constant returns (uint256);
+  function transfer(address to, uint256 value) public returns (bool);
+  event Transfer(address indexed from, address indexed to, uint256 value);
+}
+
+contract ERC20 is ERC20Basic {
+  function allowance(address owner, address spender) public constant returns (uint256);
+  function transferFrom(address from, address to, uint256 value) public returns (bool);
+  function approve(address spender, uint256 value) public returns (bool);
+  event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+
 contract BasicToken is ERC20Basic {
   using SafeMath for uint256;
 
@@ -640,32 +635,6 @@ contract BasicToken is ERC20Basic {
     return balances[_owner];
   }
 
-}
-
-library SafeMath {
-  function mul(uint256 a, uint256 b) internal constant returns (uint256) {
-    uint256 c = a * b;
-    assert(a == 0 || c / a == b);
-    return c;
-  }
-
-  function div(uint256 a, uint256 b) internal constant returns (uint256) {
-    // assert(b > 0); // Solidity automatically throws when dividing by 0
-    uint256 c = a / b;
-    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-    return c;
-  }
-
-  function sub(uint256 a, uint256 b) internal constant returns (uint256) {
-    assert(b <= a);
-    return a - b;
-  }
-
-  function add(uint256 a, uint256 b) internal constant returns (uint256) {
-    uint256 c = a + b;
-    assert(c >= a);
-    return c;
-  }
 }
 
 contract StandardToken is ERC20, BasicToken {
@@ -873,16 +842,76 @@ contract MenloToken is PausableToken, BurnableToken {
 
 }
 
-library SafeERC20 {
-  function safeTransfer(ERC20Basic token, address to, uint256 value) internal {
-    assert(token.transfer(to, value));
+library SafeMath {
+  function mul(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
   }
 
-  function safeTransferFrom(ERC20 token, address from, address to, uint256 value) internal {
-    assert(token.transferFrom(from, to, value));
+  function div(uint256 a, uint256 b) internal constant returns (uint256) {
+    // assert(b > 0); // Solidity automatically throws when dividing by 0
+    uint256 c = a / b;
+    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+    return c;
   }
 
-  function safeApprove(ERC20 token, address spender, uint256 value) internal {
-    assert(token.approve(spender, value));
+  function sub(uint256 a, uint256 b) internal constant returns (uint256) {
+    assert(b <= a);
+    return a - b;
+  }
+
+  function add(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
   }
 }
+
+contract MenloTokenTimelock {
+  using SafeERC20 for ERC20Basic;
+
+  // ERC20 basic token contract being held
+  ERC20Basic public token;
+
+  // MENLO-NOTE!
+  mapping (address => uint) public balance;
+
+  // timestamp when token release is enabled
+  uint256 public releaseTime;
+
+  // MENLO-NOTE!
+  address public presale;
+
+  modifier onlyPresale() {
+    require(msg.sender == presale);
+    _;
+  }
+
+  function MenloTokenTimelock(ERC20Basic _token, address _presale, uint256 _releaseTime) public {
+    require(_releaseTime > now);
+    token = _token;
+    presale = _presale;
+    releaseTime = _releaseTime;
+  }
+
+  // MENLO-NOTE!
+  function deposit(address _beneficiary, uint256 _amount) public onlyPresale {
+    balance[_beneficiary] += _amount;
+  }
+
+  /**
+   * @notice Transfers tokens held by timelock to beneficiary.
+   */
+  function release() public {
+    require(now >= releaseTime);
+
+    uint256 amount = token.balanceOf(this);
+    require(amount > 0);
+    // MENLO-NOTE!
+    require(balance[msg.sender] > 0);
+    require(amount >= balance[msg.sender]);
+    token.transfer(msg.sender, balance[msg.sender]);
+  }
+}
+

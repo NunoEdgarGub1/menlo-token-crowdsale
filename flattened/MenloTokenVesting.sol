@@ -1,4 +1,11 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.13;
+
+contract ERC20Basic {
+  uint256 public totalSupply;
+  function balanceOf(address who) public constant returns (uint256);
+  function transfer(address to, uint256 value) public returns (bool);
+  event Transfer(address indexed from, address indexed to, uint256 value);
+}
 
 library SafeMath {
   function mul(uint256 a, uint256 b) internal constant returns (uint256) {
@@ -190,9 +197,3 @@ contract MenloTokenVesting is Ownable {
   }
 }
 
-contract ERC20Basic {
-  uint256 public totalSupply;
-  function balanceOf(address who) public constant returns (uint256);
-  function transfer(address to, uint256 value) public returns (bool);
-  event Transfer(address indexed from, address indexed to, uint256 value);
-}
