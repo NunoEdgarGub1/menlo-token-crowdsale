@@ -43,6 +43,14 @@ contract MenloTokenPresale is Ownable {
   uint256 public weiRaised;
 
   /**
+   * @dev Throws if called by any account other than the whitelister.
+   */
+  modifier onlyWhitelister() {
+    require(msg.sender == whitelister);
+    _;
+  }
+
+  /**
    * event for token purchase logging
    * @param purchaser who paid for the tokens
    * @param beneficiary who got the tokens
@@ -103,7 +111,7 @@ contract MenloTokenPresale is Ownable {
   /// @notice interface for founders to whitelist investors
   /// @param _addresses array of investors
   /// @param _status enable or disable
-  function whitelistAddresses(address[] _addresses, bool _status) public onlyOwner {
+  function whitelistAddresses(address[] _addresses, bool _status) public onlyWhitelister {
     for (uint256 i = 0; i < _addresses.length; i++) {
         address investorAddress = _addresses[i];
         if (whitelist[investorAddress] == _status) {
@@ -121,6 +129,12 @@ contract MenloTokenPresale is Ownable {
 
    function setTokenTimeLock(address _tokenTimelock) public onlyOwner {
      tokenTimelock = _tokenTimelock;
+   }
+
+  address public whitelister;
+
+   function setWhitelister(address _whitelister) public onlyOwner {
+      whitelister = _whitelister;
    }
 
   // low level token purchase function

@@ -41,6 +41,14 @@ contract MenloTokenSale is Ownable {
   // amount of raised money in wei
   uint256 public weiRaised;
 
+  /**
+   * @dev Throws if called by any account other than the whitelister.
+   */
+  modifier onlyWhitelister() {
+    require(msg.sender == whitelister);
+    _;
+  }
+
   // Timestamps for the bonus periods, set in the constructor
   uint256 private HOUR1;
   uint256 private WEEK1;
@@ -116,7 +124,7 @@ contract MenloTokenSale is Ownable {
 
     uint256 currentTime = getBlockTimestamp();
     if (currentTime > startTime && currentTime <= HOUR1) {
-      bonusRate =  6500; 
+      bonusRate =  6500;
     } else if (currentTime <= WEEK1) {
       bonusRate =  6000; // after 1 hour
     } else if (currentTime <= WEEK2) {
@@ -134,7 +142,7 @@ contract MenloTokenSale is Ownable {
   /// @notice interface for founders to whitelist investors
   /// @param _addresses array of investors
   /// @param _status enable or disable
-  function whitelistAddresses(address[] _addresses, bool _status) public onlyOwner {
+  function whitelistAddresses(address[] _addresses, bool _status) public onlyWhitelister {
     for (uint256 i = 0; i < _addresses.length; i++) {
         address investorAddress = _addresses[i];
         if (whitelist[investorAddress] == _status) {
@@ -147,6 +155,12 @@ contract MenloTokenSale is Ownable {
    function ethToTokens(uint256 ethAmount) internal view returns (uint256) {
     return ethAmount.mul(calculateBonusRate());
    }
+
+   address public whitelister;
+
+    function setWhitelister(address _whitelister) public onlyOwner {
+       whitelister = _whitelister;
+    }
 
   // low level token purchase function
   // caution: tokens must be redeemed by beneficiary address
