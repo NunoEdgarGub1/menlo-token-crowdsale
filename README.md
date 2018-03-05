@@ -59,20 +59,22 @@ Preminted tokens are allocated to the company growth fund and team by the `Menlo
 2. We deploy `MenloTokenPresale.sol` and list contributors who have been whitelist approved upon passing KYC procedures.
 The listing is done by us with a standard private key and whitelisting script.
 
-2. The presale tokens are transferred to the `MenloTokenPresale.sol` contract by calling `InitializePresale` inside of `MenloToken.sol` from the contract owner.
+2. The presale tokens are transferred to the `MenloTokenPresale.sol` contract by calling `initializePresale` inside of `MenloToken.sol` from the contract owner.
 
 3. The `TokenTimeLock.sol` contract is deployed where all presale tokens purchased will be sent to immediately upon purchase and stored on behalf of each contributor. It is required to call `setTokenTimeLock` in `MenloTokenPresale.sol` once this contract has been deployed.
 
-4. Contributors addresses are collected during the KYC process and stored in `ARRAY_OF_ADDRESSES.json`. By running the `whitelist_signed.js` script, batches of addresses are added as approved purchasers. Without a whitelisted address, purchasing MET during the presale will not be possible.
+4. The address used for whitelisting is assigned by `setWhitelister` in the `MenloTokenPresale.sol` contract.
 
-5. The presale starts. At this point contributors can buy tokens by sending ETH to the `MenloTokenPresale.sol` contract address directly, or alternatively by calling the `buyTokens()` function.
+5. Contributors addresses are collected during the KYC process and stored in `ARRAY_OF_ADDRESSES.json`. By running the `whitelist_signed.js` script, batches of addresses are added as approved purchasers. Without a whitelisted address, purchasing MET during the presale will not be possible.
+
+6. The presale starts. At this point contributors can buy tokens by sending ETH to the `MenloTokenPresale.sol` contract address directly, or alternatively by calling the `buyTokens()` function.
 It is possible to buy several times, as long as cap is not exceeded.
 
-6. As a result of either the endTime or cap being met, unsold tokens are sent back to the company wallet upon calling `refund` from the `MenloToken.sol` owner address.
+7. As a result of either the endTime or cap being met, unsold tokens are sent back to the company wallet upon calling `refund` from the `MenloToken.sol` owner address.
 
-7. Token transfers are enabled by calling `unpause` by the `MenloToken.sol `owner address.
+8. Token transfers are enabled by calling `unpause` by the `MenloToken.sol `owner address.
 
-8. The same process will be repeated for deployment of `MenloTokenSale.sol` using steps 2, 3, 5, 6, and 7. The tokens allocated for the main sale will be sent to the contract by calling `InitializeCrowdsale` inside of `MenloToken.sol` from the contract owner. All tokens purchased will be sent directly to the beneficiary address immediately upon calling `buyTokens`.
+9. The same process will be repeated for deployment of `MenloTokenSale.sol` using steps 2, 3, 5, 6, 7, 8 and 9. The tokens allocated for the main sale will be sent to the contract by calling `initializeCrowdsale` inside of `MenloToken.sol` from the contract owner. All tokens purchased will be sent directly to the beneficiary address immediately upon calling `buyTokens`.
 
 ### Per module description
 The system has 3 modules, namely, whitelisting, token, and token sale modules.
@@ -103,4 +105,3 @@ We use Open Zeppelin code for `SafeMath`, `Ownable`, `ERC20Basic`, `PausableToke
 
 We decided to modify the standard `TokenTimeLock.sol` found in the Open Zeppelin library to handle holding tokens for multiple beneficiaries rather than just one at a time, and we expect the auditor to review these changes.
 Changes are denoted with `MENLO-NOTE!` comment in contract file.
-
