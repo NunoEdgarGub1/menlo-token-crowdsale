@@ -1,4 +1,4 @@
-pragma solidity ^0.4.13;
+pragma solidity ^0.4.18;
 
 library SafeERC20 {
   function safeTransfer(ERC20Basic token, address to, uint256 value) internal {
@@ -74,4 +74,3 @@ contract MenloTokenTimelock {
     token.transfer(msg.sender, balance[msg.sender]);
   }
 }
-
