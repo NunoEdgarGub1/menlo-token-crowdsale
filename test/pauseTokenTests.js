@@ -1,5 +1,4 @@
 'use strict';
-
 let TokenSale = artifacts.require('./helpers/MenloTokenSaleMock.sol');
 let METToken = artifacts.require('./helpers/MenloTokenMock.sol');
 
@@ -21,6 +20,7 @@ contract('metTokenPause', async function([miner, owner, investor, investor2, wal
   let tokenSaleDeployed;
   let tokenDeployed;
   let startTime, endTime;
+
   beforeEach(async function () {
     tokenDeployed = await METToken.new();
     startTime = latestTime() + duration.seconds(1);

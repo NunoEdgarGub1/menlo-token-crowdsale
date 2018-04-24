@@ -5,15 +5,14 @@ const BigNumber = require("bignumber.js");
 const assertFail = require("./helpers/assertFail");
 import { latestTime, duration } from "./helpers/latestTime";
 
-contract("MenloTokenVesting", async function(
-  [miner, owner, advisor1, advisor2, notAdvisor]
-) {
+contract("MenloTokenVesting", async function([miner, owner, advisor1, advisor2, notAdvisor]) {
   let metVestingDeployed;
   let tokenDeployed;
   let startTime;
   let cliffTime;
   let releaseTime;
   let period;
+
   describe("Advisors", async function() {
     // Advisors:
     //   - 25m MET

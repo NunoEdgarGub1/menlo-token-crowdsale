@@ -3,8 +3,6 @@ pragma solidity ^0.4.18;
 import 'zeppelin-solidity/contracts/token/PausableToken.sol';
 import 'zeppelin-solidity/contracts/token/BurnableToken.sol';
 import 'zeppelin-solidity/contracts/token/ERC20Basic.sol';
-import './MenloTokenSale.sol';
-import './MenloTokenPresale.sol';
 
 contract MenloToken is PausableToken, BurnableToken {
 
@@ -28,21 +26,22 @@ contract MenloToken is PausableToken, BurnableToken {
   address private presale;
   address private crowdsale;
 
+  modifier presaleNotInitialized() {
+    require(!isPresaleAddressSet());
+    _;
+  }
+
+  modifier crowdsaleNotInitialized() {
+    require(!isCrowdsaleAddressSet());
+    _;
+  }
+
   function MenloToken() public {
     require(INITIAL_SUPPLY > 0);
     require((PRESALE_SUPPLY + PUBLICSALE_SUPPLY + GROWTH_SUPPLY + TEAM_SUPPLY + ADVISOR_SUPPLY + PARTNER_SUPPLY) == INITIAL_SUPPLY);
     totalSupply = INITIAL_SUPPLY;
     balances[msg.sender] = INITIAL_SUPPLY;
     Transfer(0x0, msg.sender, INITIAL_SUPPLY);
-  }
-
-  function isCrowdsaleAddressSet() public constant returns (bool) {
-    return (address(crowdsale) != address(0));
-  }
-
-  modifier crowdsaleNotInitialized() {
-    require(!isCrowdsaleAddressSet());
-    _;
   }
 
   function initializeCrowdsale(address _crowdsale) public onlyOwner crowdsaleNotInitialized {
@@ -52,15 +51,6 @@ contract MenloToken is PausableToken, BurnableToken {
     transferOwnership(_crowdsale);
   }
 
-  function isPresaleAddressSet() public constant returns (bool) {
-    return (address(presale) != address(0));
-  }
-
-  modifier presaleNotInitialized() {
-    require(!isPresaleAddressSet());
-    _;
-  }
-
   function initializePresale(address _presale) public onlyOwner presaleNotInitialized {
     transfer(_presale, PRESALE_SUPPLY);
     presale = _presale;
@@ -68,24 +58,26 @@ contract MenloToken is PausableToken, BurnableToken {
     transferOwnership(_presale);
   }
 
+  function claimTokens(address _token) public onlyOwner {
+    if (_token == 0x0) {
+      owner.transfer(this.balance);
+      return;
+    }
+
+    ERC20Basic token = ERC20Basic(_token);
+    uint256 balance = token.balanceOf(this);
+    token.transfer(owner, balance);
+  }
+
+  function isCrowdsaleAddressSet() public constant returns (bool) {
+    return (address(crowdsale) != address(0));
+  }
+
+  function isPresaleAddressSet() public constant returns (bool) {
+    return (address(presale) != address(0));
+  }
+
   function getBlockTimestamp() internal constant returns (uint256) {
     return block.timestamp;
   }
-
-  // Don't accept calls to the contract address; must call a method.
-  function () public {
-    revert();
-  }
-
-  function claimTokens(address _token) public onlyOwner {
-        if (_token == 0x0) {
-            owner.transfer(this.balance);
-            return;
-        }
-
-        ERC20Basic token = ERC20Basic(_token);
-        uint256 balance = token.balanceOf(this);
-        token.transfer(owner, balance);
-    }
-
 }

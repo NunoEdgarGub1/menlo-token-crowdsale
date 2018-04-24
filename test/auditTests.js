@@ -19,95 +19,89 @@ contract('Audit Tests', async function ([deployer, investor, crowdsale_wallet]) 
   let startTime;
   let endTime;
 
-    it('Initializing the MenloToken contract should emit a transfer event which generates the tokens', async function () {
-      tokenDeployed = await METToken.new();
-      let event = tokenDeployed.Transfer({});
-      event.watch(function(err, res) {
-        if (!err) {
-          assert.equal(res['event'], 'Transfer');
-          event.stopWatching();
-        }
+  it('Initializing the MenloToken contract should emit a transfer event which generates the tokens', async function () {
+    tokenDeployed = await METToken.new();
+    let event = tokenDeployed.Transfer({});
+    event.watch(function(err, res) {
+      if (!err) {
+        assert.equal(res['event'], 'Transfer');
+        event.stopWatching();
+      }
     });
   });
 
-    it('Cannot deploy crowdsale if the cap is 0', async function () {
-      tokenDeployed = await METToken.new();
-      await assertFail(async () => {
-        tokenSaleDeployed = await TokenSale.new(
-        tokenDeployed.address,
-        latestTime() + duration.seconds(17),
-        latestTime() + duration.weeks(3),
-        0
-      )
-    });
-  });
-
-    it('Cannot deploy crowdsale if the token is null', async function () {
-      await assertFail(async () => {
+  it('Cannot deploy crowdsale if the cap is 0', async function () {
+    tokenDeployed = await METToken.new();
+    await assertFail(async () => {
       tokenSaleDeployed = await TokenSale.new(
-        0x0,
-        latestTime() + duration.seconds(15),
-        latestTime() + duration.weeks(6),
-        12345
-      )
+      tokenDeployed.address,
+      latestTime() + duration.seconds(17),
+      latestTime() + duration.weeks(3),
+      0);
     });
   });
 
-    it('Cannot deploy crowdsale if the token is null', async function () {
-      tokenDeployed = await METToken.new();
-      await assertFail(async () => {
-      tokenSaleDeployed = await TokenSale.new(
-        tokenDeployed.address,
-        latestTime() + duration.seconds(19),
-        latestTime() + duration.weeks(2),
-        12345,
-        0x0
-      )
+  it('Cannot deploy crowdsale if the token is null', async function () {
+    await assertFail(async () => {
+    tokenSaleDeployed = await TokenSale.new(
+      0x0,
+      latestTime() + duration.seconds(15),
+      latestTime() + duration.weeks(6),
+      12345);
     });
   });
 
-    it('Cannot deploy crowdsale if the start time is in the past', async function () {
-      tokenDeployed = await METToken.new();
-      await assertFail(async () => {
-      tokenSaleDeployed = await TokenSale.new(
-        tokenDeployed.address,
-        latestTime() - duration.seconds(2),
-        latestTime() + duration.weeks(1),
-        12345
-      )
+  it('Cannot deploy crowdsale if the token is null', async function () {
+    tokenDeployed = await METToken.new();
+    await assertFail(async () => {
+    tokenSaleDeployed = await TokenSale.new(
+      tokenDeployed.address,
+      latestTime() + duration.seconds(19),
+      latestTime() + duration.weeks(2),
+      12345,
+      0x0);
     });
   });
 
-    it('Cannot deploy crowdsale if the end time is before the start time', async function () {
-      tokenDeployed = await METToken.new();
-      await assertFail(async () => {
-      tokenSaleDeployed = await TokenSale.new(
-        tokenDeployed.address,
-        latestTime() + duration.weeks(10),
-        latestTime() + duration.weeks(1),
-        12345
-      )
+  it('Cannot deploy crowdsale if the start time is in the past', async function () {
+    tokenDeployed = await METToken.new();
+    await assertFail(async () => {
+    tokenSaleDeployed = await TokenSale.new(
+      tokenDeployed.address,
+      latestTime() - duration.seconds(2),
+      latestTime() + duration.weeks(1),
+      12345);
     });
   });
 
-    it('Cap should not be able to exceed balance of crowdsale contract', async function () {
-      tokenDeployed = await METToken.new();
-      await assertFail(async () => {
-      await TokenSale.new(
-        tokenDeployed.address,
-        latestTime() + duration.seconds(20),
-        latestTime() + duration.weeks(1),
-        web3.toWei(150000001, 'ether')
-      )
+  it('Cannot deploy crowdsale if the end time is before the start time', async function () {
+    tokenDeployed = await METToken.new();
+    await assertFail(async () => {
+    tokenSaleDeployed = await TokenSale.new(
+      tokenDeployed.address,
+      latestTime() + duration.weeks(10),
+      latestTime() + duration.weeks(1),
+      12345);
     });
   });
 
-    it('Tokens should not be able to be sent to the null address from the token contract', async function () {
-      tokenDeployed = await METToken.new();
-      await assertFail(async () => { await tokenDeployed.transfer(0x0, tokenDeployed.address) });
+  it('Cap should not be able to exceed balance of crowdsale contract', async function () {
+    tokenDeployed = await METToken.new();
+    await assertFail(async () => {
+    await TokenSale.new(
+      tokenDeployed.address,
+      latestTime() + duration.seconds(20),
+      latestTime() + duration.weeks(1),
+      web3.toWei(150000001, 'ether'));
     });
+  });
 
-    describe('Deploy Contracts', async function () {
+  it('Tokens should not be able to be sent to the null address from the token contract', async function () {
+    tokenDeployed = await METToken.new();
+    await assertFail(async () => { await tokenDeployed.transfer(0x0, tokenDeployed.address) });
+  });
+
+  describe('Deploy Contracts', async function () {
     beforeEach(async function () {
       startTime = latestTime() + duration.seconds(20);
       endTime = startTime + duration.weeks(1);
@@ -119,7 +113,7 @@ contract('Audit Tests', async function ([deployer, investor, crowdsale_wallet]) 
 
     it('Calling an invalid function on the token triggers the fallback and reverts', async function () {
       await assertFail(async () => {
-      await tokenDeployed.sendTransaction({ from: investor })
+        await tokenDeployed.sendTransaction({ from: investor })
       });
     });
 
@@ -157,8 +151,7 @@ contract('Audit Tests', async function ([deployer, investor, crowdsale_wallet]) 
 
       it('Tokens should not be able to be sent to the null address by the crowdsale', async function () {
         await tokenSaleDeployed.setBlockTimestamp(startTime + 1);
-        await assertFail(async () => { await tokenSaleDeployed.buyTokens(0x0, { from: investor });
-        });
+        await assertFail(async () => { await tokenSaleDeployed.buyTokens(0x0, { from: investor }); });
       });
 
       it('Token Ownership should be transferred when crowdsale is finalized', async function () {
