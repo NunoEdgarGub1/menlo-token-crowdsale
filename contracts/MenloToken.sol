@@ -25,6 +25,9 @@ contract MenloToken is PausableToken, BurnableToken {
   uint256 public constant ADVISOR_SUPPLY = 100000000 * token_factor;
   uint256 public constant PARTNER_SUPPLY = 100000000 * token_factor;
 
+  address private presale;
+  address private crowdsale;
+
   function MenloToken() public {
     require(INITIAL_SUPPLY > 0);
     require((PRESALE_SUPPLY + PUBLICSALE_SUPPLY + GROWTH_SUPPLY + TEAM_SUPPLY + ADVISOR_SUPPLY + PARTNER_SUPPLY) == INITIAL_SUPPLY);
@@ -32,8 +35,6 @@ contract MenloToken is PausableToken, BurnableToken {
     balances[msg.sender] = INITIAL_SUPPLY;
     Transfer(0x0, msg.sender, INITIAL_SUPPLY);
   }
-
-  address private crowdsale;
 
   function isCrowdsaleAddressSet() public constant returns (bool) {
     return (address(crowdsale) != address(0));
@@ -50,8 +51,6 @@ contract MenloToken is PausableToken, BurnableToken {
     pause();
     transferOwnership(_crowdsale);
   }
-
-  address private presale;
 
   function isPresaleAddressSet() public constant returns (bool) {
     return (address(presale) != address(0));

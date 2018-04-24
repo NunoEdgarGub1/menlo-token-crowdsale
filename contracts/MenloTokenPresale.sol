@@ -23,6 +23,10 @@ contract MenloTokenPresale is Ownable {
   // Whitelisted investors
   mapping (address => bool) public whitelist;
 
+  address public whitelister;
+
+  address public tokenTimelock;
+
   // manual early close flag
   bool public isFinalized = false;
 
@@ -68,6 +72,8 @@ contract MenloTokenPresale is Ownable {
 
   // termination early or otherwise
   event Finalized();
+
+  event TokensRefund(uint256 _amount);
 
   /**
    * event refund of excess ETH if purchase is above the cap
@@ -125,13 +131,10 @@ contract MenloTokenPresale is Ownable {
     return ethAmount.mul(calculateBonusRate());
    }
 
-   address public tokenTimelock;
-
    function setTokenTimeLock(address _tokenTimelock) public onlyOwner {
      tokenTimelock = _tokenTimelock;
    }
 
-  address public whitelister;
 
    function setWhitelister(address _whitelister) public onlyOwner {
       whitelister = _whitelister;
@@ -222,7 +225,6 @@ contract MenloTokenPresale is Ownable {
   }
 
   // Allows the owner to take back the tokens that are assigned to the sale contract.
-  event TokensRefund(uint256 _amount);
   function refund() external onlyOwner returns (bool) {
       require(hasEnded());
       uint256 tokens = token.balanceOf(address(this));

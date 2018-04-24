@@ -22,6 +22,8 @@ contract MenloTokenSale is Ownable {
   // Whitelisted investors
   mapping (address => bool) public whitelist;
 
+  address public whitelister;
+
   // manual early close flag
   bool public isFinalized = false;
 
@@ -150,17 +152,15 @@ contract MenloTokenSale is Ownable {
         }
         whitelist[investorAddress] = _status;
     }
-   }
+  }
 
-   function ethToTokens(uint256 ethAmount) internal view returns (uint256) {
+  function ethToTokens(uint256 ethAmount) internal view returns (uint256) {
     return ethAmount.mul(calculateBonusRate());
-   }
+  }
 
-   address public whitelister;
-
-    function setWhitelister(address _whitelister) public onlyOwner {
-       whitelister = _whitelister;
-    }
+  function setWhitelister(address _whitelister) public onlyOwner {
+     whitelister = _whitelister;
+  }
 
   // low level token purchase function
   // caution: tokens must be redeemed by beneficiary address

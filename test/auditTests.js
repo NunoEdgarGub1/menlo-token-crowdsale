@@ -141,32 +141,31 @@ contract('Audit Tests', async function ([deployer, investor, crowdsale_wallet]) 
     describe('Initialize crowdsale', async function () {
       beforeEach(async function () {
         await tokenDeployed.initializeCrowdsale(tokenSaleDeployed.address);
-        await tokenSaleDeployed.whitelistAddresses([investor], true);
-    });
-
-    it('Only the owner can unpause token transfers', async function () {
-      await assertFail(async () => { await tokenDeployed.unpause({ from: deployer }) });
-      await assertFail(async () => { await tokenDeployed.unpause({ from: investor }) });
-      await assertFail(async () => { await tokenDeployed.unpause({ from: crowdsale_wallet }) });
-      await assertFail(async () => { await tokenDeployed.unpause({ from: presale_wallet }) });
-    })
-
-    it('Tokens should not be able to be refunded before the Crowdsale is finished', async function () {
-      await tokenSaleDeployed.setBlockTimestamp(startTime + 1);
-      await assertFail(async () => { await tokenSaleDeployed.refund() });
-    });
-
-    it('Tokens should not be able to be sent to the null address by the crowdsale', async function () {
-      await tokenSaleDeployed.setBlockTimestamp(startTime + 1);
-      await assertFail(async () => { await tokenSaleDeployed.buyTokens(0x0, { from: investor });
       });
-    });
 
-    it('Token Ownership should be transferred when crowdsale is finalized', async function () {
-      assert.equal(await tokenDeployed.owner.call(), tokenSaleDeployed.address);
-      await tokenSaleDeployed.setBlockTimestamp(endTime + 1);
-      await tokenSaleDeployed.checkFinalize();
-      assert.equal(await tokenDeployed.owner.call(), deployer);
+      it('Only the owner can unpause token transfers', async function () {
+        await assertFail(async () => { await tokenDeployed.unpause({ from: deployer }) });
+        await assertFail(async () => { await tokenDeployed.unpause({ from: investor }) });
+        await assertFail(async () => { await tokenDeployed.unpause({ from: crowdsale_wallet }) });
+        await assertFail(async () => { await tokenDeployed.unpause({ from: presale_wallet }) });
+      });
+
+      it('Tokens should not be able to be refunded before the Crowdsale is finished', async function () {
+        await tokenSaleDeployed.setBlockTimestamp(startTime + 1);
+        await assertFail(async () => { await tokenSaleDeployed.refund() });
+      });
+
+      it('Tokens should not be able to be sent to the null address by the crowdsale', async function () {
+        await tokenSaleDeployed.setBlockTimestamp(startTime + 1);
+        await assertFail(async () => { await tokenSaleDeployed.buyTokens(0x0, { from: investor });
+        });
+      });
+
+      it('Token Ownership should be transferred when crowdsale is finalized', async function () {
+        assert.equal(await tokenDeployed.owner.call(), tokenSaleDeployed.address);
+        await tokenSaleDeployed.setBlockTimestamp(endTime + 1);
+        await tokenSaleDeployed.checkFinalize();
+        assert.equal(await tokenDeployed.owner.call(), deployer);
       });
     });
   });

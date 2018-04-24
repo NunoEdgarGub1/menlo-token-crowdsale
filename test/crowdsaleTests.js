@@ -7,10 +7,11 @@ import { latestTime, duration } from './helpers/latestTime';
 
 const DECIMALS = 18;
 
-contract('TokenSale', async function ([miner, owner, investor, investor2, wallet]) {
+contract('TokenSale', async function ([miner, owner, investor, investor2, wallet, whitelister]) {
   let tokenSaleDeployed;
   let tokenDeployed;
   let startTime;
+
   beforeEach(async function () {
     tokenDeployed = await METToken.new();
     startTime = latestTime() + duration.seconds(1);
@@ -32,36 +33,38 @@ contract('TokenSale', async function ([miner, owner, investor, investor2, wallet
   });
 
   describe('#whitelistAddresses', async function () {
-    let investors;
     beforeEach(async function () {
-      investors = [
-        '0x2718C59E08Afa3F8b1EaA0fCA063c566BA4EC98B',
-        '0x14ABEbe9064B73c63AEcd87942B0ED2Fef2F7B3B',
-        '0x5850f06700E92eDe92cb148734b3625DCB6A14d4',
-        '0xA38c9E212B46C58e05fCb678f0Ce62B5e1bc6c52',
-        '0x7e2392A0DDE190457e1e8b2c7fd50d46ACb6ad4f',
-        '0x0306D4C6ABC853bfDc711291032402CF8506422b',
-        '0x1a91022B10DCbB60ED14584dC66B7faC081A9691'
-      ];
+       await tokenSaleDeployed.setWhitelister(whitelister);
     });
+
+    let investors = [
+      '0x2718C59E08Afa3F8b1EaA0fCA063c566BA4EC98B',
+      '0x14ABEbe9064B73c63AEcd87942B0ED2Fef2F7B3B',
+      '0x5850f06700E92eDe92cb148734b3625DCB6A14d4',
+      '0xA38c9E212B46C58e05fCb678f0Ce62B5e1bc6c52',
+      '0x7e2392A0DDE190457e1e8b2c7fd50d46ACb6ad4f',
+      '0x0306D4C6ABC853bfDc711291032402CF8506422b',
+      '0x1a91022B10DCbB60ED14584dC66B7faC081A9691'
+    ];
+
     it('should whitelist and blacklist', async function () {
       let firstInvestorStatus = await tokenSaleDeployed.whitelist(investors[0]);
       assert.isFalse(firstInvestorStatus);
 
-      await tokenSaleDeployed.whitelistAddresses(investors, true);
+      await tokenSaleDeployed.whitelistAddresses(investors, true, {from: whitelister});
       firstInvestorStatus = await tokenSaleDeployed.whitelist(investors[0]);
       assert.isTrue(firstInvestorStatus);
 
-      await tokenSaleDeployed.whitelistAddresses(investors, false);
+      await tokenSaleDeployed.whitelistAddresses(investors, false, {from: whitelister});
       firstInvestorStatus = await tokenSaleDeployed.whitelist(investors[0]);
       assert.isFalse(firstInvestorStatus);
-    })
+    });
 
     it('allows to buy MET tokens at 30% bonus for duration of 1 hour', async function () {
       let firstInvestorStatus = await tokenSaleDeployed.whitelist(investors[0]);
       assert.isFalse(firstInvestorStatus);
 
-      await tokenSaleDeployed.whitelistAddresses([investor], true);
+      await tokenSaleDeployed.whitelistAddresses([investor], true, {from: whitelister});
       let balance = await tokenDeployed.balanceOf(investor);
       assert.equal(balance.toNumber(), 0);
 
@@ -75,7 +78,7 @@ contract('TokenSale', async function ([miner, owner, investor, investor2, wallet
       let firstInvestorStatus = await tokenSaleDeployed.whitelist(investors[0]);
       assert.isFalse(firstInvestorStatus);
 
-      await tokenSaleDeployed.whitelistAddresses([investor], true);
+      await tokenSaleDeployed.whitelistAddresses([investor], true, {from: whitelister});
       let balance = await tokenDeployed.balanceOf(investor);
       assert.equal(balance.toNumber(), 0);
 
@@ -91,7 +94,7 @@ contract('TokenSale', async function ([miner, owner, investor, investor2, wallet
       let firstInvestorStatus = await tokenSaleDeployed.whitelist(investors[0]);
       assert.isFalse(firstInvestorStatus);
 
-      await tokenSaleDeployed.whitelistAddresses([investor], true);
+      await tokenSaleDeployed.whitelistAddresses([investor], true, {from: whitelister});
       let balance = await tokenDeployed.balanceOf(investor);
       assert.equal(balance.toNumber(), 0);
 
@@ -107,7 +110,7 @@ contract('TokenSale', async function ([miner, owner, investor, investor2, wallet
       let firstInvestorStatus = await tokenSaleDeployed.whitelist(investors[0]);
       assert.isFalse(firstInvestorStatus);
 
-      await tokenSaleDeployed.whitelistAddresses([investor], true);
+      await tokenSaleDeployed.whitelistAddresses([investor], true, {from: whitelister});
       let balance = await tokenDeployed.balanceOf(investor);
       assert.equal(balance.toNumber(), 0);
 
@@ -123,7 +126,7 @@ contract('TokenSale', async function ([miner, owner, investor, investor2, wallet
       let firstInvestorStatus = await tokenSaleDeployed.whitelist(investors[0]);
       assert.isFalse(firstInvestorStatus);
 
-      await tokenSaleDeployed.whitelistAddresses([investor], true);
+      await tokenSaleDeployed.whitelistAddresses([investor], true, {from: whitelister});
       let balance = await tokenDeployed.balanceOf(investor);
       assert.equal(balance.toNumber(), 0);
 
@@ -139,7 +142,7 @@ contract('TokenSale', async function ([miner, owner, investor, investor2, wallet
       let firstInvestorStatus = await tokenSaleDeployed.whitelist(investors[0]);
       assert.isFalse(firstInvestorStatus);
 
-      await tokenSaleDeployed.whitelistAddresses([investor], true);
+      await tokenSaleDeployed.whitelistAddresses([investor], true, {from: whitelister});
       let balance = await tokenDeployed.balanceOf(investor);
       assert.equal(balance.toNumber(), 0);
 
@@ -152,7 +155,7 @@ contract('TokenSale', async function ([miner, owner, investor, investor2, wallet
     });
 
     it('cannot purchase MET tokens after the crowdsale is finalized', async function () {
-      await tokenSaleDeployed.whitelistAddresses([investor], true);
+      await tokenSaleDeployed.whitelistAddresses([investor], true, {from: whitelister});
       await tokenSaleDeployed.emergencyFinalize();
       const value = web3.toWei(1, 'ether');
       await assertFail(async () => {
@@ -166,13 +169,13 @@ contract('TokenSale', async function ([miner, owner, investor, investor2, wallet
         await tokenSaleDeployed.buyTokens(0x0, { from: investor, value: value });
       });
       // Whitelist for purchaser
-      await tokenSaleDeployed.whitelistAddresses([investor], true);
+      await tokenSaleDeployed.whitelistAddresses([investor], true, {from: whitelister});
       await assertFail(async () => {
         await tokenSaleDeployed.buyTokens(0x0, { from: investor, value: value });
       });
       // Whitelist for purchaser and beneficiary (0x0)
       // Should still fail even if someone whitelists the null address
-      await tokenSaleDeployed.whitelistAddresses([0x0], true);
+      await tokenSaleDeployed.whitelistAddresses([0x0], true, {from: whitelister});
       await assertFail(async () => {
         await tokenSaleDeployed.buyTokens(0x0, { from: investor, value: value });
       });
@@ -180,12 +183,12 @@ contract('TokenSale', async function ([miner, owner, investor, investor2, wallet
 
     it('cannot purchase MET tokens if the beneficiary is not whitelisted, even if you are', async function () {
       const value = web3.toWei(1, 'ether');
-      await tokenSaleDeployed.whitelistAddresses([investor], true);
+      await tokenSaleDeployed.whitelistAddresses([investor], true, {from: whitelister});
       await assertFail(async () => {
         await tokenSaleDeployed.buyTokens(investor2, { from: investor, value: value });
       });
       // Should work once the beneficiary has been whitelisted
-      await tokenSaleDeployed.whitelistAddresses([investor2], true);
+      await tokenSaleDeployed.whitelistAddresses([investor2], true, {from: whitelister});
       await tokenSaleDeployed.buyTokens(investor2, { from: investor, value: value });
       let balance = await tokenDeployed.balanceOf(investor2);
       assert.equal(balance.toNumber(), 6500 * 10 ** DECIMALS, 'balanceOf is 6500 for investor who just bought tokens');
@@ -197,7 +200,7 @@ contract('TokenSale', async function ([miner, owner, investor, investor2, wallet
         await tokenSaleDeployed.sendTransaction({ from: investor, value: value });
       });
       // Should work once the beneficiary has been whitelisted
-      await tokenSaleDeployed.whitelistAddresses([investor], true);
+      await tokenSaleDeployed.whitelistAddresses([investor], true, {from: whitelister});
       await tokenSaleDeployed.sendTransaction({ from: investor, value: value });
       let balance = await tokenDeployed.balanceOf(investor);
       assert.equal(balance.toNumber(), 6500 * 10 ** DECIMALS, 'balanceOf is 6500 for investor who just bought tokens');
