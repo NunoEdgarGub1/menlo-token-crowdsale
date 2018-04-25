@@ -13,21 +13,21 @@ import './MenloTokenTimelock.sol';
  */
 contract MenloTokenPresale is MenloSaleBase {
 
-  address public tokenTimelock;
+  MenloTokenTimelock public tokenTimelock;
 
   // 1 ETH = 6,750 MET
   uint256 public constant BONUS_RATE = 6750;
 
-  function setTokenTimeLock(address _tokenTimelock) public onlyOwner {
+  function setTokenTimeLock(MenloTokenTimelock _tokenTimelock) public onlyOwner {
     tokenTimelock = _tokenTimelock;
   }
 
   // low level token purchase function
   // caution: tokens must be redeemed by beneficiary address
-  function buyTokens(address beneficiary) public payable returns (uint256) {
-    uint256 tokens = super.buyTokens(beneficiary);
-    MenloTokenTimelock(tokenTimelock).deposit(beneficiary, tokens);
-    return tokens;
+  function buyTokens(address _beneficiary) public payable returns (uint256) {
+    uint256 _tokens = super.buyTokens(_beneficiary);
+    tokenTimelock.deposit(_beneficiary, _tokens);
+    return _tokens;
   }
 
   function calculateBonusRate() public view returns (uint256) {

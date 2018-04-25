@@ -15,10 +15,11 @@ contract MenloSaleBase is Ownable {
   // Whitelisted investors
   mapping (address => bool) public whitelist;
 
+  // Special role used exclusively for managing the whitelist
   address public whitelister;
 
   // manual early close flag
-  bool public isFinalized = false;
+  bool public isFinalized;
 
   // cap for crowdsale in wei
   uint256 public cap;
@@ -43,7 +44,6 @@ contract MenloSaleBase is Ownable {
     require(msg.sender == whitelister);
     _;
   }
-
 
   /**
    * event for token purchase logging
@@ -101,67 +101,64 @@ contract MenloSaleBase is Ownable {
   // Allows the owner to take back the tokens that are assigned to the sale contract.
   function refund() external onlyOwner returns (bool) {
     require(hasEnded());
-    uint256 tokens = token.balanceOf(address(this));
+    uint256 _tokens = token.balanceOf(address(this));
 
-    if (tokens == 0) {
+    if (_tokens == 0) {
       return false;
     }
 
-    require(token.transfer(owner, tokens));
+    require(token.transfer(owner, _tokens));
 
-    TokensRefund(tokens);
+    TokensRefund(_tokens);
 
     return true;
   }
 
   // low level token purchase function
   // caution: tokens must be redeemed by beneficiary address
-  function buyTokens(address beneficiary) public payable returns (uint256) {
-    require(whitelist[beneficiary]);
-    require(beneficiary != 0x0);
+  function buyTokens(address _beneficiary) public payable returns (uint256) {
+    require(whitelist[_beneficiary]);
+    require(_beneficiary != 0x0);
     require(validPurchase());
 
-    uint256 weiAmount = msg.value;
+    uint256 _weiAmount = msg.value;
 
-    uint256 remainingToFund = cap.sub(weiRaised);
-    if (weiAmount > remainingToFund) {
-      weiAmount = remainingToFund;
+    uint256 _remainingToFund = cap.sub(weiRaised);
+    if (_weiAmount > _remainingToFund) {
+      _weiAmount = _remainingToFund;
     }
-    uint256 weiToReturn = msg.value.sub(weiAmount);
-    uint256 tokens = ethToTokens(weiAmount);
+    uint256 _weiToReturn = msg.value.sub(_weiAmount);
+    uint256 _tokens = ethToTokens(_weiAmount);
 
     token.unpause();
-    weiRaised = weiRaised.add(weiAmount);
+    weiRaised = weiRaised.add(_weiAmount);
 
-    forwardFunds(weiAmount);
-    if (weiToReturn > 0) {
-      msg.sender.transfer(weiToReturn);
-      Refund(msg.sender, beneficiary, weiToReturn);
+    forwardFunds(_weiAmount);
+    if (_weiToReturn > 0) {
+      msg.sender.transfer(_weiToReturn);
+      Refund(msg.sender, _beneficiary, _weiToReturn);
     }
     // send tokens to purchaser
-    TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
-    token.transfer(beneficiary, tokens);
+    TokenPurchase(msg.sender, _beneficiary, _weiAmount, _tokens);
+    token.transfer(_beneficiary, _tokens);
     token.pause();
-    TokenRedeem(beneficiary, tokens);
+    TokenRedeem(_beneficiary, _tokens);
 
-    if (weiRaised == cap) {
-      checkFinalize();
-    }
+    checkFinalize();
 
-    return tokens;
+    return _tokens;
   }
 
-  function claimTokens(address _token) public onlyOwner {
+  function claimTokens(ERC20Basic _token) public onlyOwner {
     require(hasEnded());
-    if (_token == 0x0) {
+    if (address(_token) == 0x0) {
         owner.transfer(this.balance);
         return;
     }
 
-    ERC20Basic refundToken = ERC20Basic(_token);
-    uint256 balance = refundToken.balanceOf(this);
-    refundToken.transfer(owner, balance);
-    TokensRefund(balance);
+    uint256 _balance = _token.balanceOf(this);
+    _token.transfer(owner, _balance);
+    TokensRefund(_balance);
   }
 
   /// @notice interface for founders to whitelist investors
@@ -169,11 +166,10 @@ contract MenloSaleBase is Ownable {
   /// @param _status enable or disable
   function whitelistAddresses(address[] _addresses, bool _status) public onlyWhitelister {
     for (uint256 i = 0; i < _addresses.length; i++) {
-      address investorAddress = _addresses[i];
-      if (whitelist[investorAddress] == _status) {
-        continue;
+      address _investorAddress = _addresses[i];
+      if (whitelist[_investorAddress] != _status) {
+        whitelist[_investorAddress] = _status;
       }
-      whitelist[investorAddress] = _status;
     }
   }
 
@@ -199,9 +195,9 @@ contract MenloSaleBase is Ownable {
     if (isFinalized) {
       return true;
     }
-    bool capReached = weiRaised >= cap;
-    bool passedEndTime = getBlockTimestamp() > endTime;
-    return passedEndTime || capReached;
+    bool _capReached = weiRaised >= cap;
+    bool _passedEndTime = getBlockTimestamp() > endTime;
+    return _passedEndTime || _capReached;
   }
 
   // @dev does not require that crowdsale `hasEnded()` to leave safegaurd
@@ -218,20 +214,20 @@ contract MenloSaleBase is Ownable {
   function validPurchase() internal returns (bool) {
     checkFinalize();
     require(!isFinalized);
-    bool withinPeriod = getBlockTimestamp() >= startTime && getBlockTimestamp() <= endTime;
-    bool nonZeroPurchase = msg.value != 0;
-    bool contractHasTokens = token.balanceOf(this) > 0;
-    return withinPeriod && nonZeroPurchase && contractHasTokens;
+    bool _withinPeriod = getBlockTimestamp() >= startTime && getBlockTimestamp() <= endTime;
+    bool _nonZeroPurchase = msg.value != 0;
+    bool _contractHasTokens = token.balanceOf(this) > 0;
+    return _withinPeriod && _nonZeroPurchase && _contractHasTokens;
   }
 
   // send ether to the fund collection wallet
   // override to create custom fund forwarding mechanisms
-  function forwardFunds(uint256 amount) internal {
-    wallet.transfer(amount);
+  function forwardFunds(uint256 _amount) internal {
+    wallet.transfer(_amount);
   }
 
-  function ethToTokens(uint256 ethAmount) internal view returns (uint256) {
-    return ethAmount.mul(calculateBonusRate());
+  function ethToTokens(uint256 _ethAmount) internal view returns (uint256) {
+    return _ethAmount.mul(calculateBonusRate());
   }
 
   function getBlockTimestamp() internal view returns (uint256) {

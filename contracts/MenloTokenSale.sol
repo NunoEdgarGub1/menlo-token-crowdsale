@@ -47,30 +47,30 @@ contract MenloTokenSale is MenloSaleBase {
   // Week 3: 1 ETH = 5,500 MET (10% Bonus)
   // Week 4: 1 ETH = 5,250 MET (5% Bonus)
   function calculateBonusRate() public view returns (uint256) {
-    uint256 bonusRate = 5000;
+    uint256 _bonusRate = 5000;
 
-    uint256 currentTime = getBlockTimestamp();
-    if (currentTime > startTime && currentTime <= HOUR1) {
-      bonusRate =  6500;
-    } else if (currentTime <= WEEK1) {
-      bonusRate =  6000; // after 1 hour
-    } else if (currentTime <= WEEK2) {
-      bonusRate =  5750; // after 1 week
-    } else if (currentTime <= WEEK3) {
-      bonusRate =  5500; // after 2 weeks
-    } else if (currentTime <= WEEK4) {
-      bonusRate =  5250; // after 3 weeks
-    } else if (currentTime <= WEEK5) {
-      bonusRate = 5000; // after 4 weeks
+    uint256 _currentTime = getBlockTimestamp();
+    if (_currentTime > startTime && _currentTime <= HOUR1) {
+      _bonusRate =  6500;
+    } else if (_currentTime <= WEEK1) {
+      _bonusRate =  6000; // after 1 hour
+    } else if (_currentTime <= WEEK2) {
+      _bonusRate =  5750; // after 1 week
+    } else if (_currentTime <= WEEK3) {
+      _bonusRate =  5500; // after 2 weeks
+    } else if (_currentTime <= WEEK4) {
+      _bonusRate =  5250; // after 3 weeks
+    } else if (_currentTime <= WEEK5) {
+      _bonusRate = 5000; // after 4 weeks
     }
-    return bonusRate;
+    return _bonusRate;
   }
 
   // low level token purchase function
   // caution: tokens must be redeemed by beneficiary address
-  function buyTokens(address beneficiary) public payable returns (uint256) {
-    uint256 tokens = super.buyTokens(beneficiary);
-    TokenRedeem(beneficiary, tokens);
-    return tokens;
+  function buyTokens(address _beneficiary) public payable returns (uint256) {
+    uint256 _tokens = super.buyTokens(_beneficiary);
+    TokenRedeem(_beneficiary, _tokens);
+    return _tokens;
   }
 }

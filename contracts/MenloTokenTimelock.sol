@@ -45,11 +45,11 @@ contract MenloTokenTimelock {
   function release() public {
     require(now >= releaseTime);
 
-    uint256 amount = token.balanceOf(this);
-    require(amount > 0);
+    uint256 _amount = token.balanceOf(this);
+    require(_amount > 0);
     // MENLO-NOTE!
     require(balance[msg.sender] > 0);
-    require(amount >= balance[msg.sender]);
+    require(_amount >= balance[msg.sender]);
     token.transfer(msg.sender, balance[msg.sender]);
   }
 }

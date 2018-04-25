@@ -58,15 +58,13 @@ contract MenloToken is PausableToken, BurnableToken {
     transferOwnership(_presale);
   }
 
-  function claimTokens(address _token) public onlyOwner {
-    if (_token == 0x0) {
+  function claimTokens(ERC20Basic _token) public onlyOwner {
+    if (address(_token) == 0x0) {
       owner.transfer(this.balance);
       return;
     }
 
-    ERC20Basic token = ERC20Basic(_token);
-    uint256 balance = token.balanceOf(this);
-    token.transfer(owner, balance);
+    _token.transfer(owner, _token.balanceOf(this));
   }
 
   function isCrowdsaleAddressSet() public constant returns (bool) {
