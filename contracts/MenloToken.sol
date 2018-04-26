@@ -1,8 +1,8 @@
 pragma solidity ^0.4.23;
 
-import 'zeppelin-solidity/contracts/token/PausableToken.sol';
-import 'zeppelin-solidity/contracts/token/BurnableToken.sol';
-import 'zeppelin-solidity/contracts/token/ERC20Basic.sol';
+import 'zeppelin-solidity/contracts/token/ERC20/PausableToken.sol';
+import 'zeppelin-solidity/contracts/token/ERC20/BurnableToken.sol';
+import 'zeppelin-solidity/contracts/token/ERC20/ERC20Basic.sol';
 
 contract MenloToken is PausableToken, BurnableToken {
 
@@ -39,7 +39,7 @@ contract MenloToken is PausableToken, BurnableToken {
   constructor() public {
     require(INITIAL_SUPPLY > 0);
     require((PRESALE_SUPPLY + PUBLICSALE_SUPPLY + GROWTH_SUPPLY + TEAM_SUPPLY + ADVISOR_SUPPLY + PARTNER_SUPPLY) == INITIAL_SUPPLY);
-    totalSupply = INITIAL_SUPPLY;
+    totalSupply_ = INITIAL_SUPPLY;
     balances[msg.sender] = INITIAL_SUPPLY;
     emit Transfer(0x0, msg.sender, INITIAL_SUPPLY);
   }
