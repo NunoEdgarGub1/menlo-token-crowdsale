@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.23;
 
 import 'zeppelin-solidity/contracts/token/SafeERC20.sol';
 
@@ -27,7 +27,7 @@ contract MenloTokenTimelock {
     _;
   }
 
-  function MenloTokenTimelock(ERC20Basic _token, address _presale, uint256 _releaseTime) public {
+  constructor(ERC20Basic _token, address _presale, uint256 _releaseTime) public {
     require(_releaseTime > now);
     token = _token;
     presale = _presale;
