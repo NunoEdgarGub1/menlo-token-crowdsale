@@ -12,9 +12,4 @@ contract MenloTokenMock is MenloToken {
   function getBlockTimestamp() internal constant returns (uint256) {
     return timeStamp;
   }
-
-  function MenloTokenMock() MenloToken()
-  {
-  }
-
 }

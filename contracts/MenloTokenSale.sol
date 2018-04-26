@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.23;
 
 import './MenloSaleBase.sol';
 
@@ -20,7 +20,7 @@ contract MenloTokenSale is MenloSaleBase {
   uint256 private WEEK4;
   uint256 private WEEK5;
 
-  function MenloTokenSale(
+  constructor(
     address _token,
     uint256 _startTime,
     uint256 _endTime,
@@ -70,7 +70,7 @@ contract MenloTokenSale is MenloSaleBase {
   // caution: tokens must be redeemed by beneficiary address
   function buyTokens(address _beneficiary) public payable returns (uint256) {
     uint256 _tokens = super.buyTokens(_beneficiary);
-    TokenRedeem(_beneficiary, _tokens);
+    emit TokenRedeem(_beneficiary, _tokens);
     return _tokens;
   }
 }

@@ -1,8 +1,8 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.23;
 
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
-import 'zeppelin-solidity/contracts/token/ERC20Basic.sol';
+import 'zeppelin-solidity/contracts/token/ERC20/ERC20Basic.sol';
 import './MenloToken.sol';
 
 
@@ -72,7 +72,7 @@ contract MenloSaleBase is Ownable {
    */
   event Refund(address indexed purchaser, address indexed beneficiary, uint256 amount);
 
-  function MenloSaleBase(
+  constructor(
       address _token,
       uint256 _startTime,
       uint256 _endTime,
@@ -109,7 +109,7 @@ contract MenloSaleBase is Ownable {
 
     require(token.transfer(owner, _tokens));
 
-    TokensRefund(_tokens);
+    emit TokensRefund(_tokens);
 
     return true;
   }
@@ -136,13 +136,13 @@ contract MenloSaleBase is Ownable {
     forwardFunds(_weiAmount);
     if (_weiToReturn > 0) {
       msg.sender.transfer(_weiToReturn);
-      Refund(msg.sender, _beneficiary, _weiToReturn);
+      emit Refund(msg.sender, _beneficiary, _weiToReturn);
     }
     // send tokens to purchaser
-    TokenPurchase(msg.sender, _beneficiary, _weiAmount, _tokens);
+    emit TokenPurchase(msg.sender, _beneficiary, _weiAmount, _tokens);
     token.transfer(_beneficiary, _tokens);
     token.pause();
-    TokenRedeem(_beneficiary, _tokens);
+    emit TokenRedeem(_beneficiary, _tokens);
 
     checkFinalize();
 
@@ -152,13 +152,13 @@ contract MenloSaleBase is Ownable {
   function claimTokens(ERC20Basic _token) public onlyOwner {
     require(hasEnded());
     if (address(_token) == 0x0) {
-        owner.transfer(this.balance);
+        owner.transfer(address(this).balance);
         return;
     }
 
     uint256 _balance = _token.balanceOf(this);
     _token.transfer(owner, _balance);
-    TokensRefund(_balance);
+    emit TokensRefund(_balance);
   }
 
   /// @notice interface for founders to whitelist investors
@@ -205,7 +205,7 @@ contract MenloSaleBase is Ownable {
   // Allows team to close early if cap is exceeded in USD in this event.
   function finalize() internal {
     require(!isFinalized);
-    Finalized();
+    emit Finalized();
     isFinalized = true;
     token.transferOwnership(owner);
   }

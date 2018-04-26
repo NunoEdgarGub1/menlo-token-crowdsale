@@ -13,8 +13,8 @@ contract MenloTokenSaleMock is MenloTokenSale {
     return timeStamp;
   }
 
-  function MenloTokenSaleMock(address _token, uint256 _startTime, uint256 _endTime, uint256 _cap, address _wallet)
-    MenloTokenSale(_token, _startTime, _endTime, _cap, _wallet)
+  constructor(address _token, uint256 _startTime, uint256 _endTime, uint256 _cap, address _wallet)
+    MenloTokenSale(_token, _startTime, _endTime, _cap, _wallet) public
   {
   }
 
